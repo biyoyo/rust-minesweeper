@@ -1,4 +1,5 @@
 extern crate gtk;
+extern crate gdk_pixbuf;
 use gtk::*;
 use std::process;
 
@@ -20,7 +21,7 @@ impl App {
     fn new() -> App{
         let window = Window::new(WindowType::Toplevel);
         let header = Header::new();
-        window.set_titlebar(&header.cont);
+        window.set_titlebar(Some(&header.cont));
         window.set_title("Minesweeper");
     
         let board = Board::new();
@@ -37,7 +38,7 @@ impl App {
 impl Header{
     fn new() -> Header{
         let cont = HeaderBar::new();
-        cont.set_title("Minesweeper");
+        cont.set_title(Some("Minesweeper"));
         cont.set_show_close_button(true);
         Header{cont}
     }
@@ -53,16 +54,21 @@ impl Board{
             board.pack_start(&row, false, false, 0);
             for _y in 0..10
             {
-                let button = Button::new_with_label("1");
+                let im = Image::from_file("image.png");
+                let button = ToolButton::new::<Image>(None, Some("aa"));
                 row.pack_start(&button, false, false, 0);
+                //handles left click
+                button.connect_clicked(move |button| {button.set_label(Some("2"));});
                 button.connect_button_press_event(move |widget, button| {
+                    //handles double click
                     if button.get_button() == 1
                     {
-                        widget.set_label("2");
+                        widget.set_label(Some("2"));
                     }
+                    //handles right click
                     else if button.get_button() == 3
                     {
-                        widget.set_label("3");
+                        widget.set_label(Some("3"));
                     }
                     Inhibit(false)
                 });
