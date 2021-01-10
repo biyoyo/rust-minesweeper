@@ -16,7 +16,7 @@ pub struct Header{
 pub struct Board{
     pub container: Box,
     pub mine_field: Vec<Vec<i8>>,
-    pub dimension: u8,
+    pub dimension: i8,
 }
 
 impl App {
@@ -52,7 +52,7 @@ impl Header{
 }
 
 impl Board{
-    fn new(dimension: u8) -> Board{
+    fn new(dimension: i8) -> Board{
 
         let container = Box::new(Orientation::Vertical, 0);
         let mine_field = Board::init_field(dimension);
@@ -101,7 +101,7 @@ impl Board{
         board
     }
 
-    fn init_field(dimension: u8) -> Vec<Vec<i8>>
+    fn init_field(dimension: i8) -> Vec<Vec<i8>>
     {
         let mut mine_field = Vec::<Vec<i8>>::new();
         let mut vec = Vec::new();
@@ -131,14 +131,14 @@ impl Board{
         {
             for j in 0..self.dimension
             {
-                if !self.mine_on_field(i as i8, j as i8)
+                if !self.mine_on_field(i, j)
                 {
                     for k in &[-1, 0, 1]
                     {
                         for l in &[-1, 0, 1]
                         {
-                            let r = *k + i as i8;
-                            let c = *l + j as i8;
+                            let r = *k + i;
+                            let c = *l + j;
                             if self.check_valid_field(r, c) && self.mine_on_field(r, c)
                             {
                                 self.mine_field[i as usize][j as usize] += 1;
@@ -148,38 +148,6 @@ impl Board{
                 }
             }
         }
-        /*
-        self.mine_field.iter().enumerate().map(|(i, x)|
-        {
-            x.iter().enumerate().map(|(j, _)|
-            {
-                if self.check_valid_field(i as i8, j as i8)
-                {
-                    self.mine_field[i][j] +=1;
-                }
-            });
-        });
-        */
-        /*
-        for (i, _) in self.mine_field.iter().enumerate()
-        {
-            for (j, _) in self.mine_field[i].iter().enumerate()
-            {
-                for k in -1..1
-                {
-                    for l in -1..1
-                    {
-                        let r = k + i as i8;
-                        let c = l + j as i8;
-                        if self.check_valid_field(r, c) && self.mine_on_field(r, c)
-                        {
-                            self.mine_field[i][j] += 1
-                        }
-                    }
-                }
-            }
-        }
-        */
     }
 
     fn check_valid_field(&self, x: i8, y: i8) -> bool
