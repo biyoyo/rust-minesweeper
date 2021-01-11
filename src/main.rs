@@ -2,6 +2,7 @@ extern crate gtk;
 use gtk::*;
 use std::process;
 use rand::distributions::{Distribution, Uniform};
+use gdk_pixbuf::Pixbuf;
 
 pub struct App{
     pub window:Window,
@@ -17,6 +18,20 @@ pub struct Board{
     pub container: Box,
     pub mine_field: Vec<Vec<i8>>,
     pub dimension: i8,
+    pub buttons: Vec<Vec<Field>>,
+}
+
+#[derive (Clone)]
+pub struct Field{
+    pub button: ToolButton,
+    pub is_clicked: bool,
+    images: Images,
+    value: i8,
+}
+
+#[derive (Clone)]
+pub struct Images{
+    pub pixbufs: Vec<Pixbuf>,
 }
 
 impl App {
@@ -55,53 +70,41 @@ impl Board{
     fn new(dimension: i8) -> Board{
 
         let container = Box::new(Orientation::Vertical, 0);
-        let mine_field = Board::init_field(dimension);
-        for x in 0..mine_field.len()
+        let mine_field = Board::init_mines(dimension);
+        let mf = Vec::new(); 
+        let mut board = Board{container, mine_field, dimension, buttons: mf};
+        board.check_neighbours();
+        board.buttons = board.init_fields(dimension, &board.mine_field);
+
+        /*
+        for x in 0..dimension
         {
             let row = Box::new(Orientation::Horizontal, 0);
-            container.pack_start(&row, false, false, 0);
-            for y in 0..mine_field[x].len()
+            board.container.pack_start(&row, false, false, 0);
+            for y in 0..dimension
             {
-                let im = Image::from_file("image.png");
+                //let pb = Pixbuf::from_file_at_size("image.png", 32, 32);
+                let im = Image::from_pixbuf(Some(&board.images.pixbufs[7]));
+                //let im = Image::from_file("image.png");
                 //let img = Image::from_file("img.png");
                 let button = ToolButton::new::<Image>(Some(&im), Some("aa"));
                 row.pack_start(&button, false, false, 0);
-                let mut fl = false;
-                if mine_field[x][y] == -1
-                {
-                    fl = true;
-                }
+                //let file_name = Board::get_field_image(board.mine_field[x as usize][y as usize]);
                 //handles left click
-                button.connect_clicked(move |_button| {
-                    if fl == true
-                    {
-                        //button.set_label(Some("2"));
-                        im.set_from_file("mine.png");
-                    }
-                });
-                button.connect_button_press_event(move |widget, button| {
-                    //handles double click
-                    if button.get_button() == 1
-                    {
-                        widget.set_label(Some("2"));
-                    }
-                    //handles right click
-                    else if button.get_button() == 3
-                    {
-                        widget.set_label(Some("3"));
-                    }
-                    Inhibit(false)
+                button.connect_clicked(|button| {
+                    //button.set_label(Some("2"));
+                    //im.set_from_file(file_name);
+                    let value = board.mine_field[x as usize][y as usize] + 1;
+                    //todo try to cast as image
+                    button.get_icon_widget().unwrap().set_from_pixbuf(Some(&board.images.pixbufs[value as usize]))
                 });
             }
         }
-
-        let mut board = Board{container, mine_field, dimension};
-        board.check_neighbours();
-
+        */
         board
     }
 
-    fn init_field(dimension: i8) -> Vec<Vec<i8>>
+    fn init_mines(dimension: i8) -> Vec<Vec<i8>>
     {
         let mut mine_field = Vec::<Vec<i8>>::new();
         let mut vec = Vec::new();
@@ -123,6 +126,40 @@ impl Board{
         }
 
         mine_field
+    }
+
+    fn init_fields(&self, dimension: i8, mine_field: &Vec<Vec<i8>>) -> Vec<Vec<Field>>
+    {
+        let mut fields : Vec<Vec<Field>> = Vec::new();
+        fields.resize(dimension as usize, Vec::new());
+        for x in 0..dimension
+        {
+            let row = Box::new(Orientation::Horizontal, 0);
+            self.container.pack_start(&row, false, false, 0);
+            for y in 0..dimension
+            {
+                //let pb = Pixbuf::from_file_at_size("image.png", 32, 32);
+                //let im = Image::from_pixbuf(Some(&board.images.pixbufs[7]));
+                //let im = Image::from_file("image.png");
+                //let img = Image::from_file("img.png");
+                let value = mine_field[x as usize][y as usize];
+                let field = Field::new(value);
+                fields[x as usize].push(field.clone());
+                row.pack_start(&field.button, false, false, 0);
+                //let file_name = Board::get_field_image(board.mine_field[x as usize][y as usize]);
+                //handles left click
+                /*
+                button.connect_clicked(|button| {
+                    //button.set_label(Some("2"));
+                    //im.set_from_file(file_name);
+                    let value = board.mine_field[x as usize][y as usize] + 1;
+                    //todo try to cast as image
+                    button.get_icon_widget().unwrap().set_from_pixbuf(Some(&board.images.pixbufs[value as usize]))
+                });
+                */
+            }
+        }
+        fields
     }
 
     fn check_neighbours(&mut self)
@@ -158,6 +195,39 @@ impl Board{
     fn mine_on_field(&self, x: i8, y:i8) -> bool
     {
         self.mine_field[x as usize][y as usize] == -1
+    }
+
+    fn get_field_image(value: i8) -> &'static str
+    {
+        match value {
+            -1 => "mine.png",
+            0 => "img.png",
+            1 => "one.png",
+            2 => "two.png",
+            3 => "three.png",
+            4 => "four.png",
+            _ => "image.png",
+        }
+    }
+}
+
+impl Images{
+    fn new() ->  Images
+    {
+        let mut pixbufs = Vec::new();
+        let file_names = ["bomb.svg", "one.svg", "two.svg", "three.svg", "four.svg", "five.svg", "six.svg", "image.png"];
+
+        for file in &file_names{
+            pixbufs.push(Pixbuf::from_file_at_size(file, 48, 48).unwrap());
+        }
+        Images{pixbufs}
+    }
+}
+
+impl Field{
+    fn new(value: i8) -> Field{
+        let button = ToolButton::new::<Image>(None, Some("field"));
+        Field{button, is_clicked: false, images: Images::new(), value}
     }
 }
 
