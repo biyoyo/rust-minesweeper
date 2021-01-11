@@ -3,6 +3,7 @@ use gtk::*;
 use std::process;
 use rand::distributions::{Distribution, Uniform};
 use gdk_pixbuf::Pixbuf;
+use crate::gtk::prelude::Cast;
 
 pub struct App{
     pub window:Window,
@@ -25,13 +26,12 @@ pub struct Board{
 pub struct Field{
     pub button: ToolButton,
     pub is_clicked: bool,
-    images: Images,
     value: i8,
 }
 
 #[derive (Clone)]
 pub struct Images{
-    pub pixbufs: Vec<Pixbuf>,
+    pub images: Vec<Pixbuf>,
 }
 
 impl App {
@@ -132,31 +132,24 @@ impl Board{
     {
         let mut fields : Vec<Vec<Field>> = Vec::new();
         fields.resize(dimension as usize, Vec::new());
+        let images = Images::new().images;
         for x in 0..dimension
         {
             let row = Box::new(Orientation::Horizontal, 0);
             self.container.pack_start(&row, false, false, 0);
             for y in 0..dimension
             {
-                //let pb = Pixbuf::from_file_at_size("image.png", 32, 32);
-                //let im = Image::from_pixbuf(Some(&board.images.pixbufs[7]));
-                //let im = Image::from_file("image.png");
-                //let img = Image::from_file("img.png");
                 let value = mine_field[x as usize][y as usize];
                 let field = Field::new(value);
                 fields[x as usize].push(field.clone());
                 row.pack_start(&field.button, false, false, 0);
-                //let file_name = Board::get_field_image(board.mine_field[x as usize][y as usize]);
-                //handles left click
-                /*
-                button.connect_clicked(|button| {
-                    //button.set_label(Some("2"));
-                    //im.set_from_file(file_name);
-                    let value = board.mine_field[x as usize][y as usize] + 1;
-                    //todo try to cast as image
-                    button.get_icon_widget().unwrap().set_from_pixbuf(Some(&board.images.pixbufs[value as usize]))
+
+                let a = field.value + 1;
+                let i_clone = images[a as usize].clone();
+
+                field.button.connect_clicked(move |button| {
+                    button.get_icon_widget().unwrap().downcast::<gtk::Image>().unwrap().set_from_pixbuf(Some(&i_clone));
                 });
-                */
             }
         }
         fields
@@ -196,38 +189,26 @@ impl Board{
     {
         self.mine_field[x as usize][y as usize] == -1
     }
-
-    fn get_field_image(value: i8) -> &'static str
-    {
-        match value {
-            -1 => "mine.png",
-            0 => "img.png",
-            1 => "one.png",
-            2 => "two.png",
-            3 => "three.png",
-            4 => "four.png",
-            _ => "image.png",
-        }
-    }
 }
 
 impl Images{
     fn new() ->  Images
     {
-        let mut pixbufs = Vec::new();
-        let file_names = ["bomb.svg", "one.svg", "two.svg", "three.svg", "four.svg", "five.svg", "six.svg", "image.png"];
+        let mut images = Vec::new();
+        let file_names = ["bomb.svg", "unopened.svg","one.svg", "two.svg", "three.svg", "four.svg", "five.svg", "six.svg", "image.png"];
 
         for file in &file_names{
-            pixbufs.push(Pixbuf::from_file_at_size(file, 48, 48).unwrap());
+            images.push(Pixbuf::from_file_at_size(file, 48, 48).unwrap());
         }
-        Images{pixbufs}
+        Images{images}
     }
 }
 
 impl Field{
     fn new(value: i8) -> Field{
-        let button = ToolButton::new::<Image>(None, Some("field"));
-        Field{button, is_clicked: false, images: Images::new(), value}
+        let im = Image::from_pixbuf(Some(&Pixbuf::from_file_at_size("unopened.svg", 48, 48).unwrap()));
+        let button = ToolButton::new::<Image>(Some(&im), Some("field"));
+        Field{button, is_clicked: false, value}
     }
 }
 
