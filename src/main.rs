@@ -195,10 +195,10 @@ impl Images{
     fn new() ->  Images
     {
         let mut images = Vec::new();
-        let file_names = ["bomb.svg", "unopened.svg","one.svg", "two.svg", "three.svg", "four.svg", "five.svg", "six.svg", "image.png"];
+        let file_names = ["bomb.svg", "unopened.svg", "one.svg", "two.svg", "three.svg", "four.svg", "five.svg", "six.svg"];
 
         for file in &file_names{
-            images.push(Pixbuf::from_file_at_size(file, 48, 48).unwrap());
+            images.push(Pixbuf::from_file_at_size(format!("icons/{}", file), 48, 48).unwrap());
         }
         Images{images}
     }
@@ -206,7 +206,7 @@ impl Images{
 
 impl Field{
     fn new(value: i8) -> Field{
-        let im = Image::from_pixbuf(Some(&Pixbuf::from_file_at_size("unopened.svg", 48, 48).unwrap()));
+        let im = Image::from_pixbuf(Some(&Pixbuf::from_file_at_size("icons/unopened.svg", 48, 48).unwrap()));
         let button = ToolButton::new::<Image>(Some(&im), Some("field"));
         Field{button, is_clicked: false, value}
     }
