@@ -10,7 +10,7 @@ use std::rc::Rc;
 pub struct App {
     pub window: Window,
     pub header: Header,
-    pub board: Board,
+    pub board: Rc<RefCell<Board>>,
 }
 
 pub struct Header {
@@ -21,7 +21,7 @@ pub struct Board {
     pub container: Box,
     pub mine_field: Vec<Vec<i8>>,
     pub dimension: i8,
-    pub buttons: Vec<Vec<Field>>,
+    pub fields: Vec<Vec<Field>>,
     pub pixbufs: Vec<Pixbuf>,
 }
 
@@ -39,7 +39,8 @@ impl App {
         window.set_titlebar(Some(&header.cont));
         window.set_title("Minesweeper");
 
-        let board = Board::new(8);
+        let board_rc = Board::new(8);
+        let board = board_rc.borrow();
 
         for row in &board.mine_field {
             println!("{:?}", row);
@@ -54,7 +55,7 @@ impl App {
         App {
             window,
             header,
-            board,
+            board: board_rc.clone(),
         }
     }
 }
@@ -69,16 +70,17 @@ impl Header {
 }
 
 impl Board {
-    fn new(dimension: i8) -> Board {
+    fn new(dimension: i8) -> Rc<RefCell<Board>> {
         let container = Box::new(Orientation::Vertical, 0);
         let mine_field = Board::init_mines(dimension);
-        let mut board = Board {
+        let board_rc = Rc::new(RefCell::new(Board {
             container,
             mine_field,
             dimension,
-            buttons: Vec::new(),
+            fields: Vec::new(),
             pixbufs: Board::load_icons(),
-        };
+        }));
+        let mut board = board_rc.borrow_mut();
         board.check_neighbours();
 
         let mut fields: Vec<Vec<Field>> = Vec::new();
@@ -94,23 +96,19 @@ impl Board {
             }
         }
 
-        let board_clone = Rc::new(RefCell::new(board));
-
         for x in 0..dimension as usize {
             for y in 0..dimension as usize {
                 let value_clone = fields[x][y].value.clone();
-                let c = board_clone.clone();
-                let i_clone = c.borrow_mut().pixbufs[(value_clone + 1) as usize].clone();
+                let i_clone = board.pixbufs[(value_clone + 1) as usize].clone();
 
-                let flag = Rc::new(RefCell::new(fields[x][y].is_clicked));
-                //let mines_clone = mines_rc.clone();
-                let c = board_clone.clone();
+                let board_clone = board_rc.clone();
 
                 fields[x][y].button.connect_clicked(move |button| {
-                    *flag.borrow_mut() = true;
-                    if value_clone == -1{
-                        Board::explode(&c.borrow_mut().mine_field);
+                    let mut board = board_clone.borrow_mut();
+                    board.fields[x][y].is_clicked = true;
+                    if value_clone == -1 {
                         //open all bombs, game over
+                        Board::explode(&board);
                         println!("Issa bomb");
                     }
                     button
@@ -120,12 +118,17 @@ impl Board {
                         .unwrap()
                         .set_from_pixbuf(Some(&i_clone));
                 });
+
+                /* todo handle right click
+                field[x][y].button.connect_key_press_event(|button| {
+                    
+                });
+                */
             }
         }
-        board_clone.borrow_mut().buttons = fields;
+        board.fields = fields;
 
-        let x = &*board_clone.borrow_mut();
-        x
+        board_rc.clone()
     }
 
     fn init_mines(dimension: i8) -> Vec<Vec<i8>> {
@@ -147,41 +150,6 @@ impl Board {
         }
 
         mine_field
-    }
-
-    fn _init_fields(&self, dimension: i8, mine_field: &Vec<Vec<i8>>) -> Vec<Vec<Field>> {
-        let mut fields: Vec<Vec<Field>> = Vec::new();
-        fields.resize(dimension as usize, Vec::new());
-        for x in 0..dimension {
-            let row = Box::new(Orientation::Horizontal, 0);
-            self.container.pack_start(&row, false, false, 0);
-            for y in 0..dimension {
-                let value = mine_field[x as usize][y as usize];
-                let field = Field::new(value);
-                fields[x as usize].push(field.clone());
-                row.pack_start(&field.button, false, false, 0);
-
-                let i_clone = self.pixbufs[(field.value + 1) as usize].clone();
-                let value_clone = field.value.clone();
-                let flag = Rc::new(RefCell::new(field.is_clicked));
-                let mines_clone = Rc::new(RefCell::new(&mine_field));
-
-                field.button.connect_clicked(move |button| {
-                    *flag.borrow_mut() = true;
-                    if value_clone == -1{
-                        //open all bombs, game over
-                        println!("Issa bomb");
-                    }
-                    button
-                        .get_icon_widget()
-                        .unwrap()
-                        .downcast::<gtk::Image>()
-                        .unwrap()
-                        .set_from_pixbuf(Some(&i_clone));
-                });
-            }
-        }
-        fields
     }
 
     fn check_neighbours(&mut self) {
@@ -229,16 +197,20 @@ impl Board {
         self.mine_field[x as usize][y as usize] == -1
     }
 
-    fn explode(mines: &Vec<Vec<i8>>)
+    fn explode(board: &Board)
     {
-        for (i, _) in mines.iter().enumerate()
+        for (i, _) in board.mine_field.iter().enumerate()
         {
-            for (j, _) in mines[i].iter().enumerate()
+            for (j, _) in board.mine_field[i].iter().enumerate()
             {
-                if mines[i][j] == -1
+                if board.mine_field[i][j] == -1
                 {
-                    println!("Bomb on: {}, {}", i, j);
-                    //buttons[i][j].button.emit_clicked();
+                    board.fields[i][j].button
+                        .get_icon_widget()
+                        .unwrap()
+                        .downcast::<gtk::Image>()
+                        .unwrap()
+                        .set_from_pixbuf(Some(&board.pixbufs[0]));
                 }
             }
         }
