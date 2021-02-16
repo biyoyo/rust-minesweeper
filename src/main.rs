@@ -1,11 +1,13 @@
 extern crate gtk;
 use crate::gtk::prelude::Cast;
 use gdk_pixbuf::Pixbuf;
+use glib::Continue;
 use gtk::*;
 use rand::distributions::{Distribution, Uniform};
-use std::process;
 use std::cell::RefCell;
+use std::process;
 use std::rc::Rc;
+//use gtk::prelude::*;
 
 pub struct App {
     pub window: Window,
@@ -19,7 +21,6 @@ pub struct Header {
 
 pub struct Board {
     pub container: Box,
-    pub mine_field: Vec<Vec<i8>>,
     pub dimension: i8,
     pub fields: Vec<Vec<Field>>,
     pub pixbufs: Vec<Pixbuf>,
@@ -29,7 +30,11 @@ pub struct Board {
 pub struct Field {
     pub button: ToolButton,
     pub is_clicked: bool,
-    value: i8,
+    pub value: i8,
+}
+
+pub struct SidePanel {
+    pub container: Box,
 }
 
 impl App {
@@ -39,14 +44,17 @@ impl App {
         window.set_titlebar(Some(&header.cont));
         window.set_title("Minesweeper");
 
+        let main_container = Box::new(Orientation::Horizontal, 0);
+
         let board_rc = Board::new(8);
         let board = board_rc.borrow();
 
-        for row in &board.mine_field {
-            println!("{:?}", row);
-        }
+        main_container.pack_start(&board.container, false, false, 0);
 
-        window.add(&board.container);
+        let sp = SidePanel::new();
+        main_container.pack_start(&sp.container, false, false, 0);
+
+        window.add(&main_container);
 
         window.connect_delete_event(move |_, _| {
             main_quit();
@@ -72,29 +80,17 @@ impl Header {
 impl Board {
     fn new(dimension: i8) -> Rc<RefCell<Board>> {
         let container = Box::new(Orientation::Vertical, 0);
-        let mine_field = Board::init_mines(dimension);
+
         let board_rc = Rc::new(RefCell::new(Board {
             container,
-            mine_field,
             dimension,
             fields: Vec::new(),
             pixbufs: Board::load_icons(),
         }));
-        let mut board = board_rc.borrow_mut();
-        board.check_neighbours();
 
-        let mut fields: Vec<Vec<Field>> = Vec::new();
-        fields.resize(dimension as usize, Vec::new());
-        for x in 0..dimension {
-            let row = Box::new(Orientation::Horizontal, 0);
-            board.container.pack_start(&row, false, false, 0);
-            for y in 0..dimension {
-                let value = board.mine_field[x as usize][y as usize];
-                let field = Field::new(value);
-                fields[x as usize].push(field.clone());
-                row.pack_start(&field.button, false, false, 0);
-            }
-        }
+        let mut board = board_rc.borrow_mut();
+        let mut fields = board.init_mines();
+        Board::check_neighbours(&mut fields);
 
         for x in 0..dimension as usize {
             for y in 0..dimension as usize {
@@ -105,7 +101,6 @@ impl Board {
 
                 fields[x][y].button.connect_clicked(move |button| {
                     let mut board = board_clone.borrow_mut();
-                    board.fields[x][y].is_clicked = true;
                     if value_clone == -1 {
                         //open all bombs, game over
                         Board::explode(&board);
@@ -117,11 +112,14 @@ impl Board {
                         .downcast::<gtk::Image>()
                         .unwrap()
                         .set_from_pixbuf(Some(&i_clone));
+                    if board.fields[x][y].is_clicked == true {
+                        //recursive reveal adjacent fields without bombs
+                    }
+                    board.fields[x][y].is_clicked = true;
                 });
 
                 /* todo handle right click
                 field[x][y].button.connect_key_press_event(|button| {
-                    
                 });
                 */
             }
@@ -131,37 +129,47 @@ impl Board {
         board_rc.clone()
     }
 
-    fn init_mines(dimension: i8) -> Vec<Vec<i8>> {
-        let mut mine_field = Vec::<Vec<i8>>::new();
-        let mut vec = Vec::new();
-        vec.resize(dimension as usize, 0);
-        mine_field.resize(dimension as usize, vec);
+    fn init_mines(&mut self) -> Vec<Vec<Field>> {
+        let mut fields: Vec<Vec<Field>> = Vec::new();
+        fields.resize(self.dimension as usize, Vec::new());
 
+        for x in 0..self.dimension {
+            let row = Box::new(Orientation::Horizontal, 0);
+            self.container.pack_start(&row, false, false, 0);
+            for _y in 0..self.dimension {
+                let field = Field::new();
+                fields[x as usize].push(field.clone());
+                row.pack_start(&field.button, false, false, 0);
+            }
+        }
+
+        //place mines on random places
         let mut rng = rand::thread_rng();
-        let num = Uniform::from(0..dimension);
+        let num = Uniform::from(0..self.dimension);
         let mut mines = 0;
         while mines != 10 {
             let i = num.sample(&mut rng) as usize;
             let j = num.sample(&mut rng) as usize;
-            if mine_field[i][j] != -1 {
-                mine_field[i][j] = -1;
+            if fields[i][j].value != -1 {
+                fields[i][j].value = -1;
                 mines += 1;
             }
         }
 
-        mine_field
+        fields
     }
 
-    fn check_neighbours(&mut self) {
-        for i in 0..self.dimension {
-            for j in 0..self.dimension {
-                if !self.mine_on_field(i, j) {
+    fn check_neighbours(fields: & mut Vec<Vec<Field>>) {
+        let dimension = fields.len() as i8;
+        for i in 0..dimension {
+            for j in 0..dimension {
+                if !Board::mine_on_field(fields.to_vec(), i, j) {
                     for k in &[-1, 0, 1] {
                         for l in &[-1, 0, 1] {
                             let r = *k + i;
                             let c = *l + j;
-                            if self.check_valid_field(r, c) && self.mine_on_field(r, c) {
-                                self.mine_field[i as usize][j as usize] += 1;
+                            if Board::check_valid_field(dimension, r, c) && Board::mine_on_field(fields.to_vec(), r, c) {
+                                fields[i as usize][j as usize].value += 1;
                             }
                         }
                     }
@@ -189,23 +197,20 @@ impl Board {
         pixbufs
     }
 
-    fn check_valid_field(&self, x: i8, y: i8) -> bool {
-        x >= 0 && x < self.dimension as i8 && y >= 0 && y < self.dimension as i8
+    fn check_valid_field(dimension: i8, x: i8, y: i8) -> bool {
+        x >= 0 && x < dimension as i8 && y >= 0 && y < dimension as i8
     }
 
-    fn mine_on_field(&self, x: i8, y: i8) -> bool {
-        self.mine_field[x as usize][y as usize] == -1
+    fn mine_on_field(fields: Vec<Vec<Field>>, x: i8, y: i8) -> bool {
+        fields[x as usize][y as usize].value == -1
     }
 
-    fn explode(board: &Board)
-    {
-        for (i, _) in board.mine_field.iter().enumerate()
-        {
-            for (j, _) in board.mine_field[i].iter().enumerate()
-            {
-                if board.mine_field[i][j] == -1
-                {
-                    board.fields[i][j].button
+    fn explode(board: &Board) {
+        for (i, _) in board.fields.iter().enumerate() {
+            for (j, _) in board.fields[i].iter().enumerate() {
+                if board.fields[i][j].value == -1 {
+                    board.fields[i][j]
+                        .button
                         .get_icon_widget()
                         .unwrap()
                         .downcast::<gtk::Image>()
@@ -218,7 +223,7 @@ impl Board {
 }
 
 impl Field {
-    fn new(value: i8) -> Field {
+    fn new() -> Field {
         let im = Image::from_pixbuf(Some(
             &Pixbuf::from_file_at_size("icons/unopened.svg", 48, 48).unwrap(),
         ));
@@ -226,8 +231,36 @@ impl Field {
         Field {
             button,
             is_clicked: false,
-            value,
+            value: 0,
         }
+    }
+}
+
+impl SidePanel {
+    fn new() -> SidePanel {
+        let container = Box::new(Orientation::Vertical, 30);
+        container.set_margin_top(20);
+        container.set_margin_start(20);
+        container.set_margin_end(20);
+        let b = Button::with_label("hello");
+        container.pack_start(&b, false, false, 0);
+
+        let mut a = 0;
+        let label = Label::new(None);
+        container.pack_start(&label, false, false, 0);
+
+        glib::timeout_add_seconds_local(
+            1,
+            move || {
+                let seconds = if a >= 10 {(a%60).to_string()} else {format!("0{a}", a = a).to_string()};
+                let time_elapsed = format!("<span font-family='monospace'>{d}{m}:{s}</span>", d = a / 600, m = a / 60, s = seconds).to_string();
+                label.set_markup(&time_elapsed);
+                a += 1;
+                Continue(true)
+            },
+        );
+
+        SidePanel { container }
     }
 }
 
