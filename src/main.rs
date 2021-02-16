@@ -113,7 +113,7 @@ impl Board {
                         .downcast::<gtk::Image>()
                         .unwrap()
                         .set_from_pixbuf(Some(&i_clone));
-                    if board.fields[x][y].is_clicked == true {
+                    if board.fields[x][y].is_clicked == true  || board.fields[x][y].value == 0 {
                         //recursive reveal adjacent fields without bombs
                     }
                     board.fields[x][y].is_clicked = true;
@@ -135,7 +135,6 @@ impl Board {
                 });
             }
         }
-        //board.fields = fields;
 
         board_rc.clone()
     }
