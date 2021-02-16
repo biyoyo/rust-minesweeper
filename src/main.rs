@@ -119,10 +119,20 @@ impl Board {
                     board.fields[x][y].is_clicked = true;
                 });
 
-                /* todo handle right click
-                field[x][y].button.connect_key_press_event(|button| {
+                let board_clone = board_rc.clone();
+
+                board.fields[x][y].button.connect_button_press_event(move |button, event| {
+                    let pb_clone = board_clone.borrow().pixbufs.last().unwrap().clone();
+                    if event.get_button() == 3 {
+                        button
+                            .get_icon_widget()
+                            .unwrap()
+                            .downcast::<gtk::Image>()
+                            .unwrap()
+                            .set_from_pixbuf(Some(&pb_clone));
+                    }
+                    Inhibit(true)
                 });
-                */
             }
         }
         //board.fields = fields;
@@ -138,7 +148,7 @@ impl Board {
             let row = Box::new(Orientation::Horizontal, 0);
             self.container.pack_start(&row, false, false, 0);
             for _y in 0..self.dimension {
-                let field = Field::new(&self.pixbufs[self.pixbufs.len()-1]);
+                let field = Field::new(&self.pixbufs[self.pixbufs.len()-2]);
                 fields[x as usize].push(field.clone());
                 row.pack_start(&field.button, false, false, 0);
             }
@@ -155,7 +165,7 @@ impl Board {
                         .unwrap()
                         .downcast::<gtk::Image>()
                         .unwrap()
-                        .set_from_pixbuf(Some(&self.pixbufs[self.pixbufs.len()-1]));
+                        .set_from_pixbuf(Some(&self.pixbufs[self.pixbufs.len()-2]));
                 elem.value = 0;
             }
         }
@@ -189,43 +199,6 @@ impl Board {
         }
     }
 
-    /*
-    fn init_mines(&mut self) {
-        //place mines on random places
-        let mut rng = rand::thread_rng();
-        let num = Uniform::from(0..self.dimension);
-        let mut mines = 0;
-        while mines != 10 {
-            let i = num.sample(&mut rng) as usize;
-            let j = num.sample(&mut rng) as usize;
-            if self.fields[i][j].value != -1 {
-                self.fields[i][j].value = -1;
-                mines += 1;
-            }
-        }
-
-    }
-
-    fn init_values_of_free_fields(fields: & mut Vec<Vec<Field>>) {
-        let dimension = fields.len() as i8;
-        for i in 0..dimension {
-            for j in 0..dimension {
-                if !is_mine_on_field(fields.to_vec(), i, j) {
-                    for k in &[-1, 0, 1] {
-                        for l in &[-1, 0, 1] {
-                            let r = *k + i;
-                            let c = *l + j;
-                            if Board::is_valid_field(dimension, r, c) && Board::is_mine_on_field(fields.to_vec(), r, c) {
-                                fields[i as usize][j as usize].value += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    */
-
     fn load_icons() -> Vec<Pixbuf> {
         let mut pixbufs = Vec::new();
         let file_names = [
@@ -238,6 +211,7 @@ impl Board {
             "five.svg",
             "six.svg",
             "unopened.svg",
+            "flag.svg",
         ];
 
         for file in &file_names {
