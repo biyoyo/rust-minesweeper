@@ -88,7 +88,7 @@ impl Board {
 
                     if value_on_button == -1 {
                         //open all bombs, game over
-                        Board::reveal_all_mines(&board);
+                        board.reveal_all_mines();
                         board.game_over = true;
                         println!("Issa bomb");
                     }
@@ -104,46 +104,40 @@ impl Board {
                     //if more than there are mines are flagged, do nothing
                     //if less than there are mines are flagged, do nothing
                     //if adjacent field has a mine that is not flagged, explode and end game
-                    /*
                     if board.fields[x][y].is_clicked {
                         let mut mines_flagged = 0;
-                        for k in &[-1 as i8, 0, 1] {
-                            for l in &[-1 as i8, 0, 1] {
-                                let r = *k + x as i8;
-                                let c = *l + y as i8;
-                                if board.is_valid_field(r, c)
-                                    && board.fields[r as usize][c as usize].value == -1
-                                    && board.fields[r as usize][c as usize].is_flagged
-                                {
-                                    mines_flagged += 1;
+                        for adj in Adjacent::new(board.dimension, x, y) {
+                            if board.is_mine_on_field(adj.0, adj.1) {
+                                match board.fields[adj.0][adj.1].is_flagged {
+                                    true => mines_flagged += 1,
+                                    false => board.reveal_all_mines(),
+                                    _ => unreachable!(),
                                 }
-                            }
+                            } 
                         }
                         if mines_flagged == value_on_button {
-                            for k in &[-1 as i8, 0, 1] {
-                                for l in &[-1 as i8, 0, 1] {
-                                    let r = *k + x as i8;
-                                    let c = *l + y as i8;
-                                    if board.is_valid_field(r, c) {
-                                        board.fields[r as usize][c as usize].is_clicked = true;
-                                        let pb = &board.pixbufs[(board.fields[r as usize]
-                                            [c as usize]
-                                            .value
-                                            + 1)
-                                            as usize];
-                                        board.fields[r as usize][c as usize]
-                                            .button
-                                            .get_icon_widget()
-                                            .unwrap()
-                                            .downcast::<gtk::Image>()
-                                            .unwrap()
-                                            .set_from_pixbuf(Some(&pb));
-                                    }
+                            for adj in Adjacent::new(board.dimension, x, y) {
+                                board.fields[adj.0][adj.1].is_clicked = true;
+
+                                let field = &board.fields[adj.0][adj.1];
+
+                                let pb = if field.is_flagged {
+                                    board.pixbufs.last()
                                 }
+                                else {
+                                    Some(&board.pixbufs[(field.value + 1) as usize])
+                                };
+
+                                board.fields[adj.0][adj.1]
+                                    .button
+                                    .get_icon_widget()
+                                    .unwrap()
+                                    .downcast::<gtk::Image>()
+                                    .unwrap()
+                                    .set_from_pixbuf(pb);
                             }
                         }
                     }
-                    */
 
                     board.fields[x][y].is_clicked = true;
 
@@ -177,20 +171,30 @@ impl Board {
 
                 let board_clone = board_rc.clone();
 
+                //handles right click
                 board.fields[x][y]
                     .button
                     .connect_button_press_event(move |button, event| {
                         let mut board = board_clone.borrow_mut();
 
                         if event.get_button() == 3 && board.flags_placed < 10 {
-                            board.fields[x][y].is_flagged = true;
+                            board.fields[x][y].is_flagged = !board.fields[x][y].is_flagged;
+                            //if unflag reduce count
                             board.flags_placed += 1;
+
+                            let pb = if board.fields[x][y].is_flagged {
+                                board.pixbufs.last()
+                            }
+                            else {
+                                Some(&board.pixbufs[8 as usize])
+                            };
+
                             button
                                 .get_icon_widget()
                                 .unwrap()
                                 .downcast::<gtk::Image>()
                                 .unwrap()
-                                .set_from_pixbuf(Some(&board.pixbufs.last().unwrap()));
+                                .set_from_pixbuf(pb);
                         }
                         Inhibit(true)
                     });
@@ -247,10 +251,10 @@ impl Board {
         //calculate values of fields
         for i in 0..self.dimension {
             for j in 0..self.dimension {
-                if !self.is_mine_on_field(i, j) {
+                if !self.is_mine_on_field(i as usize, j as usize) {
                     let mut iter = Adjacent::new(self.dimension, i as usize, j as usize);
                     for adj in iter {
-                        if self.is_mine_on_field(adj.0 as i8, adj.1 as i8) {
+                        if self.is_mine_on_field(adj.0, adj.1) {
                             self.fields[i as usize][j as usize].value += 1;
                         }
                     }
@@ -284,12 +288,12 @@ impl Board {
         x >= 0 && x < self.dimension as i8 && y >= 0 && y < self.dimension as i8
     }
 
-    fn is_mine_on_field(&mut self, x: i8, y: i8) -> bool {
-        self.fields[x as usize][y as usize].value == -1
+    fn is_mine_on_field(&mut self, x: usize, y: usize) -> bool {
+        self.fields[x][y].value == -1
     }
 
-    fn reveal_all_mines(board: &Board) {
-        for row in &board.fields {
+    fn reveal_all_mines(&mut self) {
+        for row in &self.fields {
             for field in row {
                 if field.value == -1 {
                     field
@@ -298,7 +302,7 @@ impl Board {
                         .unwrap()
                         .downcast::<gtk::Image>()
                         .unwrap()
-                        .set_from_pixbuf(Some(&board.pixbufs[0]));
+                        .set_from_pixbuf(Some(&self.pixbufs[0]));
                 }
             }
         }
