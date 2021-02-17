@@ -27,10 +27,12 @@ impl SidePanel {
         });
         container.pack_start(&b, false, false, 0);
 
-        let label = Label::new(Some("00:00"));
+        let label = Label::new(None);
+        label.set_markup(&format!("<span font-family='monospace'>00:00</span>").to_string());
         container.pack_start(&label, false, false, 0);
 
-        let flags_label = Label::new(Some("0/10"));
+        let flags_label = Label::new(None);
+        flags_label.set_markup(&format!("<span font-family='monospace'>0/10</span>").to_string());
         container.pack_start(&flags_label, false, false, 0);
 
         let bc = board.clone();
@@ -52,7 +54,12 @@ impl SidePanel {
                 )
                 .to_string();
                 label.set_markup(&time_elapsed);
-                flags_label.set_label(format!("{}/10", b.flags_placed).as_str());
+
+                let flags_placed = format!(
+                    "<span font-family='monospace'>{}/10</span>",
+                    b.flags_placed
+                );
+                flags_label.set_markup(&flags_placed.to_string());
                 b.seconds_elapsed += 1;
             }
             Continue(true)
