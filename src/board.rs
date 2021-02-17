@@ -16,8 +16,8 @@ pub struct Adjacent {
 }
 
 impl Adjacent {
-    pub fn new(dimension:i8, x: i8, y: i8) -> Adjacent {
-        Adjacent{coord:(x, y), offset: (-1, -1), dimension}
+    pub fn new(dimension:i8, x: usize, y: usize) -> Adjacent {
+        Adjacent{coord:(x as i8, y as i8), offset: (-1, -1), dimension}
     }
 }
 
@@ -156,16 +156,10 @@ impl Board {
                             let current_field_value = board.fields[x][y].value;
 
                             if current_field_value == 0 {
-                                for k in &[-1 as i8, 0, 1] {
-                                    for l in &[-1 as i8, 0, 1] {
-                                        let r = *k + x as i8;
-                                        let c = *l + y as i8;
-                                        if board.is_valid_field(r, c)
-                                            && !board.fields[r as usize][c as usize].is_clicked
-                                        {
-                                            fields_to_traverse.push_back((r as usize, c as usize));
-                                            board.fields[r as usize][c as usize].is_clicked = true;
-                                        }
+                                for adj in Adjacent::new(board.dimension, x,y) {
+                                    if !board.fields[adj.0][adj.1].is_clicked {
+                                        fields_to_traverse.push_back(adj);
+                                        board.fields[adj.0][adj.1].is_clicked = true;
                                     }
                                 }
                             }
@@ -254,23 +248,12 @@ impl Board {
         for i in 0..self.dimension {
             for j in 0..self.dimension {
                 if !self.is_mine_on_field(i, j) {
-                    let mut iter = Adjacent::new(self.dimension, i, j);
+                    let mut iter = Adjacent::new(self.dimension, i as usize, j as usize);
                     for adj in iter {
                         if self.is_mine_on_field(adj.0 as i8, adj.1 as i8) {
                             self.fields[i as usize][j as usize].value += 1;
                         }
                     }
-                    /*
-                    for k in &[-1, 0, 1] {
-                        for l in &[-1, 0, 1] {
-                            let r = *k + i;
-                            let c = *l + j;
-                            if self.is_valid_field(r, c) && self.is_mine_on_field(r, c) {
-                                self.fields[i as usize][j as usize].value += 1;
-                            }
-                        }
-                    }
-                    */
                 }
             }
         }
