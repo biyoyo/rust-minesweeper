@@ -3,7 +3,7 @@ use glib::Continue;
 use gtk::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate:: Board;
+use crate::board::Board;
 
 pub struct SidePanel {
     pub container: Box,
