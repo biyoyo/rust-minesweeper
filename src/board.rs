@@ -9,6 +9,47 @@ use std::rc::Rc;
 
 use crate::Field;
 
+//generator
+pub struct Adjacent {
+    pub coord: (i8, i8),
+    offset: (i8, i8),
+    dimension: i8,
+}
+
+impl Adjacent {
+    pub fn new(dimension:i8, x: usize, y: usize) -> Adjacent {
+        Adjacent{coord:(x as i8, y as i8), offset: (-1, -1), dimension}
+    }
+}
+
+impl Iterator for Adjacent {
+    type Item = (usize, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut adjacent;
+        loop {
+            adjacent = (self.coord.0 + self.offset.0, self.coord.1 + self.offset.1);
+            if self.offset.0 < 1 && self.offset.1 <= 1 {
+                self.offset.0 += 1;
+                if self.offset == (0,0) {
+                    self.offset.0 += 1;
+                }
+            }
+            else if self.offset.0 >= 1 && self.offset.1 <= 1 {
+                self.offset.0 = -1;
+                self.offset.1 += 1;
+            }
+            else {
+                return None;
+            }
+            if adjacent.0 >= 0 && adjacent.0 < self.dimension && adjacent.1 >= 0 && adjacent.1 < self.dimension {
+                break;
+            }
+        }
+        Some((adjacent.0 as usize, adjacent.1 as usize))
+    }
+}
+
 pub struct Board {
     pub container: Box,
     pub dimension: i8,
@@ -16,6 +57,7 @@ pub struct Board {
     pub pixbufs: Vec<Pixbuf>,
     pub game_over: bool,
     pub seconds_elapsed: i32,
+    pub flags_placed: u8,
 }
 
 impl Board {
@@ -27,8 +69,9 @@ impl Board {
             dimension,
             fields: Vec::new(),
             pixbufs: Board::load_icons(),
-            game_over: true,
+            game_over: false,
             seconds_elapsed: 0,
+            flags_placed: 0,
         }));
 
         let mut board = board_rc.borrow_mut();
@@ -37,9 +80,6 @@ impl Board {
 
         for x in 0..dimension as usize {
             for y in 0..dimension as usize {
-                //let value_clone = board.fields[x][y].value.clone();
-                //let i_clone = board.pixbufs[(value_clone + 1) as usize].clone();
-
                 let board_clone = board_rc.clone();
 
                 board.fields[x][y].button.connect_clicked(move |button| {
@@ -59,13 +99,56 @@ impl Board {
                         .unwrap()
                         .downcast::<gtk::Image>()
                         .unwrap()
-                        //.set_from_pixbuf(Some(&i_clone));
                         .set_from_pixbuf(Some(&board.pixbufs[(value_on_button + 1) as usize]));
+
+                    //if all adjacent mines are flagged, reveal,
+                    //if more than there are mines are flagged, do nothing
+                    //if less than there are mines are flagged, do nothing
+                    //if adjacent field has a mine that is not flagged, explode and end game
+                    /*
+                    if board.fields[x][y].is_clicked {
+                        let mut mines_flagged = 0;
+                        for k in &[-1 as i8, 0, 1] {
+                            for l in &[-1 as i8, 0, 1] {
+                                let r = *k + x as i8;
+                                let c = *l + y as i8;
+                                if board.is_valid_field(r, c)
+                                    && board.fields[r as usize][c as usize].value == -1
+                                    && board.fields[r as usize][c as usize].is_flagged
+                                {
+                                    mines_flagged += 1;
+                                }
+                            }
+                        }
+                        if mines_flagged == value_on_button {
+                            for k in &[-1 as i8, 0, 1] {
+                                for l in &[-1 as i8, 0, 1] {
+                                    let r = *k + x as i8;
+                                    let c = *l + y as i8;
+                                    if board.is_valid_field(r, c) {
+                                        board.fields[r as usize][c as usize].is_clicked = true;
+                                        let pb = &board.pixbufs[(board.fields[r as usize]
+                                            [c as usize]
+                                            .value
+                                            + 1)
+                                            as usize];
+                                        board.fields[r as usize][c as usize]
+                                            .button
+                                            .get_icon_widget()
+                                            .unwrap()
+                                            .downcast::<gtk::Image>()
+                                            .unwrap()
+                                            .set_from_pixbuf(Some(&pb));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    */
 
                     board.fields[x][y].is_clicked = true;
 
-                    //if all adjacent mines are flagged
-                    if board.fields[x][y].is_clicked || value_on_button == 0 {
+                    if value_on_button == 0 {
                         //recursive reveal adjacent fields without bombs
                         let mut fields_to_traverse = VecDeque::new();
                         fields_to_traverse.push_back((x, y));
@@ -104,14 +187,17 @@ impl Board {
                 board.fields[x][y]
                     .button
                     .connect_button_press_event(move |button, event| {
-                        let pb_clone = board_clone.borrow().pixbufs.last().unwrap().clone();
-                        if event.get_button() == 3 {
+                        let mut board = board_clone.borrow_mut();
+
+                        if event.get_button() == 3 && board.flags_placed < 10 {
+                            board.fields[x][y].is_flagged = true;
+                            board.flags_placed += 1;
                             button
                                 .get_icon_widget()
                                 .unwrap()
                                 .downcast::<gtk::Image>()
                                 .unwrap()
-                                .set_from_pixbuf(Some(&pb_clone));
+                                .set_from_pixbuf(Some(&board.pixbufs.last().unwrap()));
                         }
                         Inhibit(true)
                     });
@@ -225,5 +311,16 @@ impl Board {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tests() {
+        let mut adj = Adjacent::new(4, 1, 1);
+        assert_eq!(adj.next(), Some((0,0)));
     }
 }

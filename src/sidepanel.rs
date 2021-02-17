@@ -22,12 +22,16 @@ impl SidePanel {
         b.connect_clicked(move |_| {
             bc.borrow_mut().init_fields();
             bc.borrow_mut().seconds_elapsed = 0;
+            bc.borrow_mut().flags_placed = 0;
             bc.borrow_mut().game_over = false;
         });
         container.pack_start(&b, false, false, 0);
 
-        let label = Label::new(None);
+        let label = Label::new(Some("00:00"));
         container.pack_start(&label, false, false, 0);
+
+        let flags_label = Label::new(Some("0/10"));
+        container.pack_start(&flags_label, false, false, 0);
 
         let bc = board.clone();
 
@@ -40,11 +44,11 @@ impl SidePanel {
                     let seconds = if a >= 10 {(a%60).to_string()} else {format!("0{a}", a = a).to_string()};
                     let time_elapsed = format!("<span font-family='monospace'>{d}{m}:{s}</span>", d = a / 600, m = a / 60, s = seconds).to_string();
                     label.set_markup(&time_elapsed);
+                    flags_label.set_label(format!("{}/10", b.flags_placed).as_str());
                     b.seconds_elapsed += 1;
                 }
                 Continue(true)
-            },
-        );
+            });
 
         SidePanel { container }
     }

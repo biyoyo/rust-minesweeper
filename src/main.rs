@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
 use crate::board::Board;
+//use crate::board::Adjacent;
 
 mod board;
 mod sidepanel;
@@ -23,6 +24,7 @@ pub struct Header {
 pub struct Field {
     pub button: ToolButton,
     pub is_clicked: bool,
+    pub is_flagged: bool,
     pub value: i8,
 }
 
@@ -80,6 +82,7 @@ impl Field {
         Field {
             button,
             is_clicked: false,
+            is_flagged: false,
             value: 0,
         }
     }
