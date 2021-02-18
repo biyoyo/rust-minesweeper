@@ -10,6 +10,7 @@ use crate::board::Board;
 mod board;
 mod sidepanel;
 mod field;
+mod pixbufs;
 
 pub struct App {
     pub window: Window,
