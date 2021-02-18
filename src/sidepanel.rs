@@ -1,11 +1,11 @@
 extern crate gtk;
-use crate::board::Board;
 use glib::Continue;
-//use gtk::*;
 use gtk:: {Box, Label, Orientation, Button};
-use gtk:: {BoxExt, LabelExt, ButtonExt, WidgetExt};
+use gtk:: {BoxExt, LabelExt, ButtonExt, WidgetExt, ContainerExt};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use crate::board::Board;
 
 pub struct SidePanel {
     pub container: Box,
@@ -20,12 +20,18 @@ impl SidePanel {
 
         let bc = board.clone();
 
-        let b = Button::with_label("restart game");
+        let label = Label::new(None);
+        label.set_markup(&format!("<span font-family='monospace'>New game</span>").to_string());
+
+        let b = Button::new();
+        b.add(&label);
+
         b.connect_clicked(move |_| {
             bc.borrow_mut().init_fields();
             bc.borrow_mut().seconds_elapsed = 0;
             bc.borrow_mut().flags_placed = 0;
             bc.borrow_mut().game_over = false;
+            bc.borrow_mut().click_counter = 0;
         });
         container.pack_start(&b, false, false, 0);
 
