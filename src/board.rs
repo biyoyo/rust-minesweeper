@@ -239,14 +239,3 @@ impl Board {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tests() {
-        let mut adj = Adjacent::new(4, 1, 1);
-        assert_eq!(adj.next(), Some((0, 0)));
-    }
-}
