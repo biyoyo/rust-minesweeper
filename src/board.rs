@@ -143,20 +143,7 @@ impl Board {
                                 else {
                                     Some(&board.pixbufs[(current_field_value + 1) as usize])
                                 };
-                                /*
-                            for adj in Adjacent::new(board.dimension, x, y) {
-                                board.fields[adj.0][adj.1].is_clicked = true;
 
-                                let field = &board.fields[adj.0][adj.1];
-
-                                let pb = if field.is_flagged {
-                                    board.pixbufs.last()
-                                }
-                                else {
-                                    Some(&board.pixbufs[(field.value + 1) as usize])
-                                };
-
-                                */
                                 board.fields[x][y]
                                     .button
                                     .get_icon_widget()
@@ -166,37 +153,6 @@ impl Board {
                                     .set_from_pixbuf(pb);
                             }
                         }
-
-                    //board.fields[x][y].is_clicked = true;
-
-                    /*
-                    if value_on_button == 0 {
-                        //recursive reveal adjacent fields without bombs
-                        let mut fields_to_traverse = VecDeque::new();
-                        fields_to_traverse.push_back((x, y));
-
-                        while let Some((x, y)) = fields_to_traverse.pop_front() {
-                            let current_field_value = board.fields[x][y].value;
-
-                            if current_field_value == 0 {
-                                for adj in Adjacent::new(board.dimension, x,y) {
-                                    if !board.fields[adj.0][adj.1].is_clicked {
-                                        fields_to_traverse.push_back(adj);
-                                        board.fields[adj.0][adj.1].is_clicked = true;
-                                    }
-                                }
-                            }
-                            let pb = &board.pixbufs[(current_field_value + 1) as usize];
-                            board.fields[x][y]
-                                .button
-                                .get_icon_widget()
-                                .unwrap()
-                                .downcast::<gtk::Image>()
-                                .unwrap()
-                                .set_from_pixbuf(Some(&pb));
-                        }
-                    }
-                    */
                 });
 
                 let board_clone = board_rc.clone();
