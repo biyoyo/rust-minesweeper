@@ -8,6 +8,7 @@ use std::rc::Rc;
 use crate::board::Board;
 
 mod board;
+mod adjacent;
 mod sidepanel;
 mod field;
 mod pixbufs;

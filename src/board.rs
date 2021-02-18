@@ -3,57 +3,12 @@ use crate::gtk::prelude::Cast;
 use gtk::*;
 use rand::distributions::{Distribution, Uniform};
 use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::VecDeque;
+use std::rc::Rc;
 
+use crate::adjacent::Adjacent;
 use crate::field::Field;
 use crate::pixbufs::Pixbufs;
-
-pub struct Adjacent {
-    pub coord: (i8, i8),
-    offset: (i8, i8),
-    dimension: i8,
-}
-
-impl Adjacent {
-    pub fn new(dimension: i8, x: usize, y: usize) -> Adjacent {
-        Adjacent {
-            coord: (x as i8, y as i8),
-            offset: (-1, -1),
-            dimension,
-        }
-    }
-}
-
-impl Iterator for Adjacent {
-    type Item = (usize, usize);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut adjacent;
-        loop {
-            adjacent = (self.coord.0 + self.offset.0, self.coord.1 + self.offset.1);
-            if self.offset.0 < 1 && self.offset.1 <= 1 {
-                self.offset.0 += 1;
-                if self.offset == (0, 0) {
-                    self.offset.0 += 1;
-                }
-            } else if self.offset.0 >= 1 && self.offset.1 <= 1 {
-                self.offset.0 = -1;
-                self.offset.1 += 1;
-            } else {
-                return None;
-            }
-            if adjacent.0 >= 0
-                && adjacent.0 < self.dimension
-                && adjacent.1 >= 0
-                && adjacent.1 < self.dimension
-            {
-                break;
-            }
-        }
-        Some((adjacent.0 as usize, adjacent.1 as usize))
-    }
-}
 
 pub struct Board {
     pub container: Box,
@@ -63,6 +18,7 @@ pub struct Board {
     pub game_over: bool,
     pub seconds_elapsed: i32,
     pub flags_placed: i8,
+    pub click_counter: i32,
 }
 
 impl Board {
@@ -77,6 +33,7 @@ impl Board {
             game_over: false,
             seconds_elapsed: 0,
             flags_placed: 0,
+            click_counter: 0,
         }));
 
         let mut board = board_rc.borrow_mut();
@@ -90,6 +47,14 @@ impl Board {
                 board.fields[x][y].button.connect_clicked(move |_button| {
                     let mut board = board_clone.borrow_mut();
 
+                    while board.click_counter == 0 && board.fields[x][y].value != 0 {
+                        board.init_fields();
+                    }
+
+                    if board.fields[x][y].is_flagged {
+                        return;
+                    }
+
                     let value_on_button = board.fields[x][y].value;
 
                     if value_on_button == -1 && !board.fields[x][y].is_flagged {
@@ -101,7 +66,8 @@ impl Board {
                     }
 
                     board.fields[x][y].is_clicked = true;
-                    board.change_pixbuf(x,y);
+                    board.click_counter += 1;
+                    board.change_pixbuf(x, y);
 
                     //if all adjacent mines are flagged, reveal,
                     //if more than there are mines are flagged, do nothing
@@ -122,6 +88,7 @@ impl Board {
                             {
                                 fields_to_traverse.push_back(adj);
                                 board.fields[adj.0][adj.1].is_clicked = true;
+                                board.click_counter += 1;
                             } else if board.is_mine_on_field(adj.0, adj.1)
                                 && !board.fields[adj.0][adj.1].is_flagged
                             {
@@ -135,16 +102,18 @@ impl Board {
                         while let Some((x, y)) = fields_to_traverse.pop_front() {
                             let current_field_value = board.fields[x][y].value;
                             board.fields[x][y].is_clicked = true;
+                            board.click_counter += 1;
 
                             if current_field_value == 0 {
                                 for adj in Adjacent::new(board.dimension, x, y) {
                                     if !board.fields[adj.0][adj.1].is_clicked {
                                         fields_to_traverse.push_back(adj);
                                         board.fields[adj.0][adj.1].is_clicked = true;
+                                        board.click_counter += 1;
                                     }
                                 }
                             }
-                            board.change_pixbuf(x,y);
+                            board.change_pixbuf(x, y);
                         }
                     }
                 });
@@ -165,7 +134,7 @@ impl Board {
                             //if unflag reduce count
                             board.flags_placed += -1 * flag as i8 + !flag as i8;
                             board.fields[x][y].is_flagged = !flag;
-                            board.change_pixbuf(x,y);
+                            board.change_pixbuf(x, y);
                         }
                         Inhibit(true)
                     });
@@ -246,30 +215,27 @@ impl Board {
 
     pub fn change_pixbuf(&mut self, x: usize, y: usize) {
         let field = &self.fields[x][y];
-        let pb = if field.value == -1 && (self.game_over || field.is_clicked) && !field.is_flagged{
+        let pb = if field.value == -1 && (self.game_over || field.is_clicked) && !field.is_flagged {
             self.pixbufs_container.get_bomb()
-        }
-        else if field.is_clicked {
+        } else if field.is_clicked {
             self.pixbufs_container.get_numbered(field.value)
-        }
-        else if field.is_flagged {
+        } else if field.is_flagged {
             self.pixbufs_container.get_flag()
-        }
-        else {
+        } else {
             self.pixbufs_container.get_unopened()
         };
 
         if field.button.get_icon_widget().is_none() {
             let im = Image::from_pixbuf(pb);
             field.button.set_icon_widget(Some(&im));
-        }
-        else {
-        field.button
-            .get_icon_widget()
-            .unwrap()
-            .downcast::<gtk::Image>()
-            .unwrap()
-            .set_from_pixbuf(pb);
+        } else {
+            field
+                .button
+                .get_icon_widget()
+                .unwrap()
+                .downcast::<gtk::Image>()
+                .unwrap()
+                .set_from_pixbuf(pb);
         }
     }
 }
