@@ -1,8 +1,7 @@
 extern crate gtk;
-use gdk_pixbuf::Pixbuf;
 use gtk::{ToolButton, Image};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Field {
     pub button: ToolButton,
     pub is_clicked: bool,
@@ -11,9 +10,8 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new(pixbuf: &Pixbuf) -> Field {
-        let im = Image::from_pixbuf(Some(&pixbuf));
-        let button = ToolButton::new::<Image>(Some(&im), Some("field"));
+    pub fn new() -> Field {
+        let button = ToolButton::new::<Image>(None, Some("field"));
         Field {
             button,
             is_clicked: false,

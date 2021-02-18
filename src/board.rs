@@ -1,13 +1,13 @@
 extern crate gtk;
 use crate::gtk::prelude::Cast;
-use gdk_pixbuf::Pixbuf;
 use gtk::*;
 use rand::distributions::{Distribution, Uniform};
 use std::cell::RefCell;
-use std::collections::VecDeque;
 use std::rc::Rc;
+use std::collections::VecDeque;
 
 use crate::field::Field;
+use crate::pixbufs::Pixbufs;
 
 pub struct Adjacent {
     pub coord: (i8, i8),
@@ -59,7 +59,7 @@ pub struct Board {
     pub container: Box,
     pub dimension: i8,
     pub fields: Vec<Vec<Field>>,
-    pub pixbufs: Vec<Pixbuf>,
+    pub pixbufs_container: Pixbufs,
     pub game_over: bool,
     pub seconds_elapsed: i32,
     pub flags_placed: i8,
@@ -73,7 +73,7 @@ impl Board {
             container,
             dimension,
             fields: Vec::new(),
-            pixbufs: Board::load_icons(),
+            pixbufs_container: Pixbufs::new(),
             game_over: false,
             seconds_elapsed: 0,
             flags_placed: 0,
@@ -87,24 +87,21 @@ impl Board {
             for y in 0..dimension as usize {
                 let board_clone = board_rc.clone();
 
-                board.fields[x][y].button.connect_clicked(move |button| {
+                board.fields[x][y].button.connect_clicked(move |_button| {
                     let mut board = board_clone.borrow_mut();
 
                     let value_on_button = board.fields[x][y].value;
 
-                    if value_on_button == -1 {
+                    if value_on_button == -1 && !board.fields[x][y].is_flagged {
                         //open all bombs, game over
-                        board.reveal_all_mines();
                         board.game_over = true;
+                        board.reveal_all_mines();
                         println!("Issa bomb");
+                        return;
                     }
 
-                    button
-                        .get_icon_widget()
-                        .unwrap()
-                        .downcast::<gtk::Image>()
-                        .unwrap()
-                        .set_from_pixbuf(Some(&board.pixbufs[(value_on_button + 1) as usize]));
+                    board.fields[x][y].is_clicked = true;
+                    board.change_pixbuf(x,y);
 
                     //if all adjacent mines are flagged, reveal,
                     //if more than there are mines are flagged, do nothing
@@ -118,7 +115,6 @@ impl Board {
                         //recursive reveal adjacent fields without bombs
                         let mut fields_to_traverse = VecDeque::new();
                         fields_to_traverse.push_back((x, y));
-                        //println!("mines_flagged: {}, value_on_field:{}", mines_flagged, value_on_button);
 
                         for adj in Adjacent::new(board.dimension, x, y) {
                             if !board.fields[adj.0][adj.1].is_clicked
@@ -129,8 +125,10 @@ impl Board {
                             } else if board.is_mine_on_field(adj.0, adj.1)
                                 && !board.fields[adj.0][adj.1].is_flagged
                             {
+                                board.game_over = true;
                                 board.reveal_all_mines();
                                 println!("not flagged rigth bih");
+                                return;
                             }
                         }
 
@@ -146,19 +144,7 @@ impl Board {
                                     }
                                 }
                             }
-                            let pb = if board.fields[x][y].is_flagged {
-                                board.pixbufs.last()
-                            } else {
-                                Some(&board.pixbufs[(current_field_value + 1) as usize])
-                            };
-
-                            board.fields[x][y]
-                                .button
-                                .get_icon_widget()
-                                .unwrap()
-                                .downcast::<gtk::Image>()
-                                .unwrap()
-                                .set_from_pixbuf(pb);
+                            board.change_pixbuf(x,y);
                         }
                     }
                 });
@@ -168,7 +154,7 @@ impl Board {
                 //handles right click
                 board.fields[x][y]
                     .button
-                    .connect_button_press_event(move |button, event| {
+                    .connect_button_press_event(move |_button, event| {
                         let mut board = board_clone.borrow_mut();
 
                         if event.get_button() == 3
@@ -178,21 +164,8 @@ impl Board {
                             let flag = board.fields[x][y].is_flagged;
                             //if unflag reduce count
                             board.flags_placed += -1 * flag as i8 + !flag as i8;
-
-                            let pb = if flag {
-                                Some(&board.pixbufs[8 as usize])
-                            } else {
-                                board.pixbufs.last()
-                            };
-
-                            button
-                                .get_icon_widget()
-                                .unwrap()
-                                .downcast::<gtk::Image>()
-                                .unwrap()
-                                .set_from_pixbuf(pb);
-
                             board.fields[x][y].is_flagged = !flag;
+                            board.change_pixbuf(x,y);
                         }
                         Inhibit(true)
                     });
@@ -210,7 +183,7 @@ impl Board {
             let row = Box::new(Orientation::Horizontal, 0);
             self.container.pack_start(&row, false, false, 0);
             for _y in 0..self.dimension {
-                let field = Field::new(&self.pixbufs[self.pixbufs.len() - 2]);
+                let field = Field::new();
                 fields[x as usize].push(field.clone());
                 row.pack_start(&field.button, false, false, 0);
             }
@@ -221,17 +194,14 @@ impl Board {
 
     pub fn init_fields(&mut self) {
         //add starting images
-        for row in &mut self.fields {
-            for elem in row {
-                elem.button
-                    .get_icon_widget()
-                    .unwrap()
-                    .downcast::<gtk::Image>()
-                    .unwrap()
-                    .set_from_pixbuf(Some(&self.pixbufs[self.pixbufs.len() - 2]));
-                elem.value = 0;
-                elem.is_clicked = false;
-                elem.is_flagged = false;
+        for x in 0..self.dimension {
+            for y in 0..self.dimension {
+                let field = &mut self.fields[x as usize][y as usize];
+                field.value = 0;
+                field.is_clicked = false;
+                field.is_flagged = false;
+
+                self.change_pixbuf(x as usize, y as usize);
             }
         }
         //place mines on random places
@@ -260,44 +230,46 @@ impl Board {
         }
     }
 
-    fn load_icons() -> Vec<Pixbuf> {
-        let mut pixbufs = Vec::new();
-        let file_names = [
-            "bomb.svg",
-            "zero.svg",
-            "one.svg",
-            "two.svg",
-            "three.svg",
-            "four.svg",
-            "five.svg",
-            "six.svg",
-            "unopened.svg",
-            "flag.svg",
-        ];
-
-        for file in &file_names {
-            pixbufs.push(Pixbuf::from_file_at_size(format!("icons/{}", file), 48, 48).unwrap());
-        }
-        pixbufs
-    }
-
     fn is_mine_on_field(&mut self, x: usize, y: usize) -> bool {
         self.fields[x][y].value == -1
     }
 
     fn reveal_all_mines(&mut self) {
-        for row in &self.fields {
-            for field in row {
-                if field.value == -1 {
-                    field
-                        .button
-                        .get_icon_widget()
-                        .unwrap()
-                        .downcast::<gtk::Image>()
-                        .unwrap()
-                        .set_from_pixbuf(Some(&self.pixbufs[0]));
+        for x in 0..self.dimension {
+            for y in 0..self.dimension {
+                if self.fields[x as usize][y as usize].value == -1 {
+                    self.change_pixbuf(x as usize, y as usize);
                 }
             }
+        }
+    }
+
+    pub fn change_pixbuf(&mut self, x: usize, y: usize) {
+        let field = &self.fields[x][y];
+        let pb = if field.value == -1 && (self.game_over || field.is_clicked) && !field.is_flagged{
+            self.pixbufs_container.get_bomb()
+        }
+        else if field.is_clicked {
+            self.pixbufs_container.get_numbered(field.value)
+        }
+        else if field.is_flagged {
+            self.pixbufs_container.get_flag()
+        }
+        else {
+            self.pixbufs_container.get_unopened()
+        };
+
+        if field.button.get_icon_widget().is_none() {
+            let im = Image::from_pixbuf(pb);
+            field.button.set_icon_widget(Some(&im));
+        }
+        else {
+        field.button
+            .get_icon_widget()
+            .unwrap()
+            .downcast::<gtk::Image>()
+            .unwrap()
+            .set_from_pixbuf(pb);
         }
     }
 }
