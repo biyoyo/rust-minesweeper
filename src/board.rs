@@ -104,18 +104,46 @@ impl Board {
                     //if more than there are mines are flagged, do nothing
                     //if less than there are mines are flagged, do nothing
                     //if adjacent field has a mine that is not flagged, explode and end game
-                    if board.fields[x][y].is_clicked {
                         let mut mines_flagged = 0;
                         for adj in Adjacent::new(board.dimension, x, y) {
-                            if board.is_mine_on_field(adj.0, adj.1) {
-                                match board.fields[adj.0][adj.1].is_flagged {
-                                    true => mines_flagged += 1,
-                                    false => board.reveal_all_mines(),
-                                    _ => unreachable!(),
-                                }
-                            } 
+                            mines_flagged += board.fields[adj.0][adj.1].is_flagged as i8;
                         }
-                        if mines_flagged == value_on_button {
+                        if mines_flagged == value_on_button || value_on_button == 0 {
+                            //recursive reveal adjacent fields without bombs
+                            let mut fields_to_traverse = VecDeque::new();
+                            fields_to_traverse.push_back((x, y));
+                            //println!("mines_flagged: {}, value_on_field:{}", mines_flagged, value_on_button);
+
+                            for adj in Adjacent::new(board.dimension, x,y) {
+                                if !board.fields[adj.0][adj.1].is_clicked && !board.is_mine_on_field(adj.0, adj.1) {
+                                    fields_to_traverse.push_back(adj);
+                                    board.fields[adj.0][adj.1].is_clicked = true;
+                                }
+                                else if board.is_mine_on_field(adj.0, adj.1) && !board.fields[adj.0][adj.1].is_flagged{
+                                    board.reveal_all_mines();
+                                    println!("not flagged rigth bih");
+                                } 
+                            }
+
+                            while let Some((x, y)) = fields_to_traverse.pop_front() {
+                                let current_field_value = board.fields[x][y].value;
+                                board.fields[x][y].is_clicked = true;
+
+                                if current_field_value == 0 {
+                                    for adj in Adjacent::new(board.dimension, x,y) {
+                                        if !board.fields[adj.0][adj.1].is_clicked {
+                                            fields_to_traverse.push_back(adj);
+                                            board.fields[adj.0][adj.1].is_clicked = true;
+                                        }
+                                    }
+                                }
+                                let pb = if board.fields[x][y].is_flagged {
+                                    board.pixbufs.last()
+                                }
+                                else {
+                                    Some(&board.pixbufs[(current_field_value + 1) as usize])
+                                };
+                                /*
                             for adj in Adjacent::new(board.dimension, x, y) {
                                 board.fields[adj.0][adj.1].is_clicked = true;
 
@@ -128,7 +156,8 @@ impl Board {
                                     Some(&board.pixbufs[(field.value + 1) as usize])
                                 };
 
-                                board.fields[adj.0][adj.1]
+                                */
+                                board.fields[x][y]
                                     .button
                                     .get_icon_widget()
                                     .unwrap()
@@ -137,10 +166,10 @@ impl Board {
                                     .set_from_pixbuf(pb);
                             }
                         }
-                    }
 
-                    board.fields[x][y].is_clicked = true;
+                    //board.fields[x][y].is_clicked = true;
 
+                    /*
                     if value_on_button == 0 {
                         //recursive reveal adjacent fields without bombs
                         let mut fields_to_traverse = VecDeque::new();
@@ -167,6 +196,7 @@ impl Board {
                                 .set_from_pixbuf(Some(&pb));
                         }
                     }
+                    */
                 });
 
                 let board_clone = board_rc.clone();
@@ -235,6 +265,7 @@ impl Board {
                     .set_from_pixbuf(Some(&self.pixbufs[self.pixbufs.len() - 2]));
                 elem.value = 0;
                 elem.is_clicked = false;
+                elem.is_flagged = false;
             }
         }
         //place mines on random places
@@ -245,7 +276,6 @@ impl Board {
             let i = num.sample(&mut rng) as usize;
             let j = num.sample(&mut rng) as usize;
             if self.fields[i][j].value != -1 {
-                println!("{}", mines);
                 self.fields[i][j].value = -1;
                 mines += 1;
             }
