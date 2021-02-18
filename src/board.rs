@@ -56,7 +56,7 @@ pub struct Board {
     pub pixbufs: Vec<Pixbuf>,
     pub game_over: bool,
     pub seconds_elapsed: i32,
-    pub flags_placed: u8,
+    pub flags_placed: i8,
 }
 
 impl Board {
@@ -177,16 +177,16 @@ impl Board {
                     .connect_button_press_event(move |button, event| {
                         let mut board = board_clone.borrow_mut();
 
-                        if event.get_button() == 3 && board.flags_placed < 10 {
-                            board.fields[x][y].is_flagged = !board.fields[x][y].is_flagged;
+                        if event.get_button() == 3 && board.flags_placed < 10  && !board.fields[x][y].is_clicked{
+                            let flag = board.fields[x][y].is_flagged;
                             //if unflag reduce count
-                            board.flags_placed += 1;
+                            board.flags_placed += -1 * flag as i8 + !flag as i8;
 
-                            let pb = if board.fields[x][y].is_flagged {
-                                board.pixbufs.last()
+                            let pb = if flag {
+                                Some(&board.pixbufs[8 as usize])
                             }
                             else {
-                                Some(&board.pixbufs[8 as usize])
+                                board.pixbufs.last()
                             };
 
                             button
@@ -195,6 +195,8 @@ impl Board {
                                 .downcast::<gtk::Image>()
                                 .unwrap()
                                 .set_from_pixbuf(pb);
+
+                            board.fields[x][y].is_flagged = !flag;
                         }
                         Inhibit(true)
                     });
