@@ -1,14 +1,15 @@
 extern crate gtk;
-use gdk_pixbuf::Pixbuf;
-use gtk::*;
+use gtk::{Window, Orientation, WindowType, HeaderBar, Box};
+use gtk::{GtkWindowExt, ContainerExt, WidgetExt, HeaderBarExt, BoxExt};
+use gtk::{main_quit, Inhibit};
 use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
 use crate::board::Board;
-//use crate::board::Adjacent;
 
 mod board;
 mod sidepanel;
+mod field;
 
 pub struct App {
     pub window: Window,
@@ -18,14 +19,6 @@ pub struct App {
 
 pub struct Header {
     pub cont: HeaderBar,
-}
-
-#[derive(Clone)]
-pub struct Field {
-    pub button: ToolButton,
-    pub is_clicked: bool,
-    pub is_flagged: bool,
-    pub value: i8,
 }
 
 impl App {
@@ -72,19 +65,6 @@ impl Header {
         cont.set_title(Some("Minesweeper"));
         cont.set_show_close_button(true);
         Header { cont }
-    }
-}
-
-impl Field {
-    fn new(pixbuf: &Pixbuf) -> Field {
-        let im = Image::from_pixbuf(Some(&pixbuf));
-        let button = ToolButton::new::<Image>(Some(&im), Some("field"));
-        Field {
-            button,
-            is_clicked: false,
-            is_flagged: false,
-            value: 0,
-        }
     }
 }
 

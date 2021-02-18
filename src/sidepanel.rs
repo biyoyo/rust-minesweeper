@@ -1,7 +1,9 @@
 extern crate gtk;
 use crate::board::Board;
 use glib::Continue;
-use gtk::*;
+//use gtk::*;
+use gtk:: {Box, Label, Orientation, Button};
+use gtk:: {BoxExt, LabelExt, ButtonExt, WidgetExt};
 use std::cell::RefCell;
 use std::rc::Rc;
 
