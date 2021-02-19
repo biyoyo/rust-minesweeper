@@ -26,7 +26,7 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.49497475"
-     inkscape:cx="244.54046"
+     inkscape:cx="-116.084"
      inkscape:cy="275.14357"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
@@ -46,7 +46,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -56,7 +56,7 @@
      id="layer1"
      transform="translate(0,-168.99997)">
     <rect
-       style="opacity:1;fill:#2895e9;fill-opacity:0.99983778;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:2, 1;stroke-dashoffset:0;stroke-opacity:1"
+       style="opacity:1;fill:#d3e0ea;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:2, 1;stroke-dashoffset:0;stroke-opacity:1"
        id="rect815"
        width="128"
        height="128"
@@ -65,7 +65,7 @@
        ry="10" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:21.16666603px;line-height:1;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       style="font-style:normal;font-weight:normal;font-size:21.16666603px;line-height:1;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#16b479;fill-opacity:1;stroke:none;stroke-width:0.26458332;"
        x="62.914795"
        y="278.00583"
        id="text819"><tspan
@@ -73,6 +73,6 @@
          id="tspan817"
          x="62.914795"
          y="278.00583"
-         style="font-size:123.47222137px;stroke-width:0.26458332">6</tspan></text>
+         style="font-size:123.47222137px;stroke-width:0.26458332;fill:#16b479;fill-opacity:1;">6</tspan></text>
   </g>
 </svg>

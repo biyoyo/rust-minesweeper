@@ -26,8 +26,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.7"
-     inkscape:cx="220.4162"
-     inkscape:cy="217.14286"
+     inkscape:cx="-34.5838"
+     inkscape:cy="230.85004"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -44,7 +44,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -54,7 +54,7 @@
      id="layer1"
      transform="translate(0,-169)">
     <rect
-       style="opacity:1;fill:#4d8dd8;fill-opacity:0.99983776;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1.99999998, 0.99999998999999995;stroke-dashoffset:0;stroke-opacity:1"
+       style="opacity:1;fill:#2c8c99;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1.99999998, 0.99999998999999995;stroke-dashoffset:0;stroke-opacity:1"
        id="rect815"
        width="128"
        height="128"
@@ -62,7 +62,7 @@
        y="169"
        ry="10.000007" />
     <rect
-       style="opacity:1;fill:#000102;fill-opacity:0.99983778;stroke:none;stroke-width:0.96580541;stroke-miterlimit:4;stroke-dasharray:1.9316108, 0.9658054;stroke-dashoffset:0;stroke-opacity:1"
+       style="opacity:1;fill:#28464b;fill-opacity:1;stroke:none;stroke-width:0.96580541;stroke-miterlimit:4;stroke-dasharray:1.9316108, 0.96580540000000004;stroke-dashoffset:0;stroke-opacity:1"
        id="rect817"
        width="12.095238"
        height="106.2113"
@@ -71,7 +71,7 @@
        ry="4.4071093" />
     <path
        sodipodi:type="star"
-       style="opacity:1;fill:#000102;fill-opacity:0.99983778;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1.99999998, 0.99999999;stroke-dashoffset:0;stroke-opacity:1"
+       style="opacity:1;fill:#28464b;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:1.99999998, 0.99999998999999995;stroke-dashoffset:0;stroke-opacity:1"
        id="path819"
        sodipodi:sides="3"
        sodipodi:cx="53.672619"

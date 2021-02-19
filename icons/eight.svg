@@ -14,8 +14,8 @@
    viewBox="0 0 127.99999 128"
    version="1.1"
    id="svg8"
-   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
-   sodipodi:docname="zero.svg">
+   sodipodi:docname="eight.svg"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)">
   <defs
      id="defs2" />
   <sodipodi:namedview
@@ -26,8 +26,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.49497475"
-     inkscape:cx="188.12402"
-     inkscape:cy="228.72999"
+     inkscape:cx="229.72576"
+     inkscape:cy="275.14357"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -56,12 +56,23 @@
      id="layer1"
      transform="translate(0,-168.99997)">
     <rect
-       style="opacity:1;fill:#f6f5f5;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:2, 1;stroke-dashoffset:0;stroke-opacity:1"
+       style="opacity:1;fill:#d3e0ea;fill-opacity:1;stroke:none;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:2, 1;stroke-dashoffset:0;stroke-opacity:1"
        id="rect815"
        width="128"
        height="128"
        x="0"
        y="168.99997"
        ry="10" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:21.16666603px;line-height:1;font-family:sans-serif;text-align:center;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#3d2b56;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="62.914795"
+       y="278.00583"
+       id="text819"><tspan
+         sodipodi:role="line"
+         x="62.914795"
+         y="278.00583"
+         style="font-size:123.47222137px;fill:#3d2b56;fill-opacity:1;stroke-width:0.26458332"
+         id="tspan815">8</tspan></text>
   </g>
 </svg>
