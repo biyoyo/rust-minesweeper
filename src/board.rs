@@ -1,16 +1,16 @@
 extern crate gtk;
 use crate::gtk::prelude::Cast;
+use glib::Continue;
 use gtk::*;
 use rand::distributions::{Distribution, Uniform};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use glib::Continue;
 
 use crate::adjacent::Adjacent;
+use crate::bad_guy::BadGuy;
 use crate::field::Field;
 use crate::pixbufs::Pixbufs;
-use crate::bad_guy::BadGuy;
 
 pub struct Board {
     pub container: Box,
@@ -22,7 +22,7 @@ pub struct Board {
     pub seconds_elapsed: i32,
     pub flags_placed: i8,
     pub click_counter: i32,
-    bad_guy: BadGuy,
+    pub bad_guy: BadGuy,
 }
 
 impl Board {
@@ -53,79 +53,7 @@ impl Board {
                 board.fields[x][y].button.connect_clicked(move |_button| {
                     let mut board = board_clone.borrow_mut();
 
-                    while board.click_counter == 0 && board.fields[x][y].value != 0 {
-                        board.init_fields();
-                    }
-
-                    if board.fields[x][y].is_flagged {
-                        return;
-                    }
-
-                    let value_on_button = board.fields[x][y].value;
-
-                    if value_on_button == -1 && !board.fields[x][y].is_flagged {
-                        //open all bombs, game over
-                        board.game_over = true;
-                        board.reveal_all_mines();
-                        println!("Issa bomb");
-                        return;
-                    }
-
-                    if x == board.bad_guy.position.0 && y == board.bad_guy.position.1 {
-                        board.bad_guy.is_active = true;
-                    }
-
-                    board.fields[x][y].is_clicked = true;
-                    board.click_counter += 1;
-                    board.change_pixbuf(x, y);
-
-                    //if all adjacent mines are flagged, reveal,
-                    //if more than there are mines are flagged, do nothing
-                    //if less than there are mines are flagged, do nothing
-                    //if adjacent field has a mine that is not flagged, explode and end game
-                    let mut mines_flagged = 0;
-                    for adj in Adjacent::new(board.dimension, x, y) {
-                        mines_flagged += board.fields[adj.0][adj.1].is_flagged as i8;
-                    }
-                    if mines_flagged == value_on_button || value_on_button == 0 {
-                        //recursive reveal adjacent fields without bombs
-                        let mut fields_to_traverse = VecDeque::new();
-                        fields_to_traverse.push_back((x, y));
-
-                        for adj in Adjacent::new(board.dimension, x, y) {
-                            if !board.fields[adj.0][adj.1].is_clicked
-                                && !board.is_mine_on_field(adj.0, adj.1)
-                            {
-                                fields_to_traverse.push_back(adj);
-                                board.fields[adj.0][adj.1].is_clicked = true;
-                                board.click_counter += 1;
-                            } else if board.is_mine_on_field(adj.0, adj.1)
-                                && !board.fields[adj.0][adj.1].is_flagged
-                            {
-                                board.game_over = true;
-                                board.reveal_all_mines();
-                                println!("not flagged rigth bih");
-                                return;
-                            }
-                        }
-
-                        while let Some((x, y)) = fields_to_traverse.pop_front() {
-                            let current_field_value = board.fields[x][y].value;
-                            board.fields[x][y].is_clicked = true;
-                            board.click_counter += 1;
-
-                            if current_field_value == 0 {
-                                for adj in Adjacent::new(board.dimension, x, y) {
-                                    if !board.fields[adj.0][adj.1].is_clicked {
-                                        fields_to_traverse.push_back(adj);
-                                        board.fields[adj.0][adj.1].is_clicked = true;
-                                        board.click_counter += 1;
-                                    }
-                                }
-                            }
-                            board.change_pixbuf(x, y);
-                        }
-                    }
+                    Board::click_field(&mut board, x,y);
                 });
 
                 let board_clone = board_rc.clone();
@@ -148,29 +76,20 @@ impl Board {
                         }
                         Inhibit(true)
                     });
-                }
             }
+        }
 
         let board_clone = board_rc.clone();
 
         glib::timeout_add_seconds_local(1, move || {
             let mut b = board_clone.borrow_mut();
-            if b.bad_guy.is_active {
-                let (prevx,prevy) = b.bad_guy.position;
+            if b.bad_guy.is_active && !b.game_over {
+                let (prevx, prevy) = b.bad_guy.position;
                 b.move_bad_guy();
-                let (x,y) = b.bad_guy.position;
-                /*
-                let (x,y) = (prevx, prevy);
-                loop {
-                    b.move_bad_guy();
-                    let (x,y) = b.bad_guy.position;
-                    if b.fields[x][y].value != -1 {
-                        break;
-                    }
-                }
-                */
-                b.change_pixbuf(prevx,prevy);
-                b.change_pixbuf(x,y);
+                let (x, y) = b.bad_guy.position;
+                b.change_pixbuf(prevx, prevy);
+                b.change_pixbuf(x, y);
+                Board::click_field(&mut b, x, y);
             }
             Continue(true)
         });
@@ -233,11 +152,103 @@ impl Board {
         }
     }
 
+    fn click_field(board: &mut Board, x: usize, y: usize) {
+        while board.click_counter == 0 && board.fields[x][y].value != 0 {
+            board.init_fields();
+        }
+        if board.click_counter == ((board.dimension*board.dimension - board.mines_count)).into() {
+            println!("You won!");
+        }
+
+        if board.fields[x][y].is_flagged {
+            return;
+        }
+
+        let value_on_button = board.fields[x][y].value;
+
+        if value_on_button == -1 && !board.fields[x][y].is_flagged {
+            //open all bombs, game over
+            board.reveal_all_mines();
+            println!("Issa bomb");
+            return;
+        }
+
+        if (x, y) == board.bad_guy.position {
+            board.bad_guy.is_active = true;
+        }
+
+        if !board.fields[x][y].is_clicked {
+            board.click_counter += 1;
+        }
+
+        //if all adjacent mines are flagged, reveal,
+        //if more than there are mines are flagged, do nothing
+        //if less than there are mines are flagged, do nothing
+        //if adjacent field has a mine that is not flagged, explode and end game
+        let mut mines_flagged = 0;
+        for adj in Adjacent::new(board.dimension, x, y) {
+            mines_flagged += board.fields[adj.0][adj.1].is_flagged as i8;
+        }
+        if (mines_flagged == value_on_button && board.fields[x][y].is_clicked) || value_on_button == 0 {
+            //recursive reveal adjacent fields without bombs
+            let mut fields_to_traverse = VecDeque::new();
+            fields_to_traverse.push_back((x, y));
+            board.fields[x][y].is_clicked = true;
+
+            for adj in Adjacent::new(board.dimension, x, y) {
+                if !board.fields[adj.0][adj.1].is_clicked && !board.is_mine_on_field(adj.0, adj.1) {
+                    fields_to_traverse.push_back(adj);
+                    board.fields[adj.0][adj.1].is_clicked = true;
+                } else if board.is_mine_on_field(adj.0, adj.1)
+                    && !board.fields[adj.0][adj.1].is_flagged
+                {
+                    board.reveal_all_mines();
+                    println!("not flagged rigth bih");
+                    return;
+                }
+            }
+
+            while let Some((x, y)) = fields_to_traverse.pop_front() {
+                let current_field_value = board.fields[x][y].value;
+                board.fields[x][y].is_clicked = true;
+
+                if current_field_value == 0 {
+                    for adj in Adjacent::new(board.dimension, x, y) {
+                        if !board.fields[adj.0][adj.1].is_clicked {
+                            fields_to_traverse.push_back(adj);
+                            board.fields[adj.0][adj.1].is_clicked = true;
+                        }
+                    }
+                }
+                board.change_pixbuf(x, y);
+            }
+        }
+
+        board.fields[x][y].is_clicked = true;
+        board.change_pixbuf(x, y);
+
+        let mut flag = true;
+        for x in 0..board.dimension {
+            for y in 0..board.dimension {
+                if !board.fields[x as usize][y as usize].is_clicked && board.fields[x as usize][y as usize].value != -1 {
+                    flag = false;
+                }
+            }
+        }
+
+        if flag {
+            println!("you won");
+            board.game_over = true;
+            return;
+        }
+    }
+
     fn is_mine_on_field(&mut self, x: usize, y: usize) -> bool {
         self.fields[x][y].value == -1
     }
 
     fn reveal_all_mines(&mut self) {
+        self.game_over = true;
         for x in 0..self.dimension {
             for y in 0..self.dimension {
                 if self.fields[x as usize][y as usize].value == -1 {
@@ -248,6 +259,10 @@ impl Board {
     }
 
     pub fn change_pixbuf(&mut self, x: usize, y: usize) {
+        if self.bad_guy.position == (x, y) {
+            self.bad_guy.is_active = self.click_counter != 0;
+        }
+
         let field = &self.fields[x][y];
         let pb = if field.value == -1 && (self.game_over || field.is_clicked) && !field.is_flagged {
             self.pixbufs_container.get_bomb()
@@ -276,8 +291,14 @@ impl Board {
     }
 
     pub fn move_bad_guy(&mut self) {
-        let adj = Adjacent::new(self.dimension, self.bad_guy.position.0, self.bad_guy.position.1);
-        let iter: Vec<(usize, usize)> = adj.filter(|(x,y)| !self.fields[*x][*y].is_flagged).collect();
+        let adj = Adjacent::new(
+            self.dimension,
+            self.bad_guy.position.0,
+            self.bad_guy.position.1,
+        );
+        let iter: Vec<(usize, usize)> = adj
+            .filter(|(x, y)| !self.fields[*x][*y].is_flagged)
+            .collect();
 
         if iter.is_empty() {
             return;
