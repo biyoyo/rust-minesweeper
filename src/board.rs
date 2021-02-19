@@ -10,6 +10,7 @@ use std::rc::Rc;
 use crate::adjacent::Adjacent;
 use crate::bad_guy::BadGuy;
 use crate::field::Field;
+use crate::field_gen::FieldGenerator;
 use crate::pixbufs::Pixbufs;
 
 pub struct Board {
@@ -46,37 +47,34 @@ impl Board {
         board.create_fields();
         board.init_fields();
 
-        for x in 0..dimension as usize {
-            for y in 0..dimension as usize {
-                let board_clone = board_rc.clone();
+        for (x, y) in FieldGenerator::new(board.dimension) {
+            let board_clone = board_rc.clone();
 
-                board.fields[x][y].button.connect_clicked(move |_button| {
+            board.fields[x][y].button.connect_clicked(move |_button| {
+                let mut board = board_clone.borrow_mut();
+
+                Board::click_field(&mut board, x, y);
+            });
+
+            let board_clone = board_rc.clone();
+
+            //handles right click
+            board.fields[x][y]
+                .button
+                .connect_button_press_event(move |_button, event| {
                     let mut board = board_clone.borrow_mut();
-
-                    Board::click_field(&mut board, x,y);
+                    if event.get_button() == 3
+                        && board.flags_placed <= board.mines_count
+                        && !board.fields[x][y].is_clicked
+                    {
+                        let flag = board.fields[x][y].is_flagged;
+                        //if unflag reduce count
+                        board.flags_placed += -1 * flag as i8 + !flag as i8;
+                        board.fields[x][y].is_flagged = !flag;
+                        board.change_pixbuf(x, y);
+                    }
+                    Inhibit(true)
                 });
-
-                let board_clone = board_rc.clone();
-
-                //handles right click
-                board.fields[x][y]
-                    .button
-                    .connect_button_press_event(move |_button, event| {
-                        let mut board = board_clone.borrow_mut();
-
-                        if event.get_button() == 3
-                            && board.flags_placed < board.mines_count
-                            && !board.fields[x][y].is_clicked
-                        {
-                            let flag = board.fields[x][y].is_flagged;
-                            //if unflag reduce count
-                            board.flags_placed += -1 * flag as i8 + !flag as i8;
-                            board.fields[x][y].is_flagged = !flag;
-                            board.change_pixbuf(x, y);
-                        }
-                        Inhibit(true)
-                    });
-            }
         }
 
         let board_clone = board_rc.clone();
@@ -116,15 +114,13 @@ impl Board {
 
     pub fn init_fields(&mut self) {
         //add starting images
-        for x in 0..self.dimension {
-            for y in 0..self.dimension {
-                let field = &mut self.fields[x as usize][y as usize];
-                field.value = 0;
-                field.is_clicked = false;
-                field.is_flagged = false;
+        for (x, y) in FieldGenerator::new(self.dimension) {
+            let field = &mut self.fields[x][y];
+            field.value = 0;
+            field.is_clicked = false;
+            field.is_flagged = false;
 
-                self.change_pixbuf(x as usize, y as usize);
-            }
+            self.change_pixbuf(x, y);
         }
         //place mines on random places
         let mut rng = rand::thread_rng();
@@ -139,13 +135,11 @@ impl Board {
             }
         }
         //calculate values of fields
-        for i in 0..self.dimension {
-            for j in 0..self.dimension {
-                if !self.is_mine_on_field(i as usize, j as usize) {
-                    for adj in Adjacent::new(self.dimension, i as usize, j as usize) {
-                        if self.is_mine_on_field(adj.0, adj.1) {
-                            self.fields[i as usize][j as usize].value += 1;
-                        }
+        for (x, y) in FieldGenerator::new(self.dimension) {
+            if !self.is_mine_on_field(x, y) {
+                for adj in Adjacent::new(self.dimension, x, y) {
+                    if self.is_mine_on_field(adj.0, adj.1) {
+                        self.fields[x][y].value += 1;
                     }
                 }
             }
@@ -156,11 +150,11 @@ impl Board {
         while board.click_counter == 0 && board.fields[x][y].value != 0 {
             board.init_fields();
         }
-        if board.click_counter == ((board.dimension*board.dimension - board.mines_count)).into() {
+        if board.click_counter == (board.dimension * board.dimension - board.mines_count).into() {
             println!("You won!");
         }
 
-        if board.fields[x][y].is_flagged {
+        if board.fields[x][y].is_flagged || board.game_over {
             return;
         }
 
@@ -189,7 +183,9 @@ impl Board {
         for adj in Adjacent::new(board.dimension, x, y) {
             mines_flagged += board.fields[adj.0][adj.1].is_flagged as i8;
         }
-        if (mines_flagged == value_on_button && board.fields[x][y].is_clicked) || value_on_button == 0 {
+        if (mines_flagged == value_on_button && board.fields[x][y].is_clicked)
+            || value_on_button == 0
+        {
             //recursive reveal adjacent fields without bombs
             let mut fields_to_traverse = VecDeque::new();
             fields_to_traverse.push_back((x, y));
@@ -228,11 +224,9 @@ impl Board {
         board.change_pixbuf(x, y);
 
         let mut flag = true;
-        for x in 0..board.dimension {
-            for y in 0..board.dimension {
-                if !board.fields[x as usize][y as usize].is_clicked && board.fields[x as usize][y as usize].value != -1 {
-                    flag = false;
-                }
+        for (x, y) in FieldGenerator::new(board.dimension) {
+            if !board.fields[x][y].is_clicked && board.fields[x][y].value != -1 {
+                flag = false;
             }
         }
 
@@ -249,11 +243,9 @@ impl Board {
 
     fn reveal_all_mines(&mut self) {
         self.game_over = true;
-        for x in 0..self.dimension {
-            for y in 0..self.dimension {
-                if self.fields[x as usize][y as usize].value == -1 {
-                    self.change_pixbuf(x as usize, y as usize);
-                }
+        for (x, y) in FieldGenerator::new(self.dimension) {
+            if self.fields[x][y].value == -1 {
+                self.change_pixbuf(x, y);
             }
         }
     }
