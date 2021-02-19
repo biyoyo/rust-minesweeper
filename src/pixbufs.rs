@@ -17,7 +17,10 @@ impl Pixbufs {
             "four",
             "five",
             "six",
+            "seven",
+            "eight",
             "unopened",
+            "badguy",
             "flag",
         ];
 
@@ -41,6 +44,10 @@ impl Pixbufs {
     }
 
     pub fn get_unopened(&mut self) -> Option<&Pixbuf> {
-        Some(&self.pixbufs[8 as usize])
+        Some(&self.pixbufs[10 as usize])
+    }
+
+    pub fn get_badguy(&mut self) -> Option<&Pixbuf> {
+        Some(&self.pixbufs[11 as usize])
     }
 }

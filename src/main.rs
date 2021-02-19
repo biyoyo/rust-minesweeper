@@ -12,6 +12,8 @@ mod adjacent;
 mod sidepanel;
 mod field;
 mod pixbufs;
+mod bad_guy;
+mod field_gen;
 
 pub struct App {
     pub window: Window,
@@ -32,15 +34,17 @@ impl App {
 
         let main_container = Box::new(Orientation::Horizontal, 0);
 
-        let board_rc = Board::new(8);
+        let board_rc = Board::new(8, 10);
         let board = board_rc.borrow();
 
+        /*
         for x in 0..8 {
             for y in 0..8 {
                 print!("{} ", board.fields[x][y].value);
             }
             println!("");
         }
+        */
 
         main_container.pack_start(&board.container, false, false, 0);
 

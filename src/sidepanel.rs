@@ -6,6 +6,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::board::Board;
+use crate::bad_guy::BadGuy;
 
 pub struct SidePanel {
     pub container: Box,
@@ -18,29 +19,39 @@ impl SidePanel {
         container.set_margin_start(20);
         container.set_margin_end(20);
 
-        let bc = board.clone();
-
         let label = Label::new(None);
         label.set_markup(&format!("<span font-family='monospace'>New game</span>").to_string());
 
         let b = Button::new();
         b.add(&label);
 
+        let bc = board.clone();
         b.connect_clicked(move |_| {
-            bc.borrow_mut().init_fields();
-            bc.borrow_mut().seconds_elapsed = 0;
-            bc.borrow_mut().flags_placed = 0;
-            bc.borrow_mut().game_over = false;
-            bc.borrow_mut().click_counter = 0;
+            let mut board = bc.borrow_mut();
+            board.seconds_elapsed = 0;
+            board.flags_placed = 0;
+            board.game_over = false;
+            board.click_counter = 0;
+            board.bad_guy = BadGuy::new(board.dimension);
+            board.init_fields();
+            println!("bad_guy on: {}", board.bad_guy.is_active);
         });
         container.pack_start(&b, false, false, 0);
 
         let label = Label::new(None);
-        label.set_markup(&format!("<span font-family='monospace'>00:00</span>").to_string());
+        label.set_markup(&format!("<span font-family='monospace'>Time elapsed:</span>").to_string());
+        container.pack_start(&label, false, false, 0);
+
+        let time_label = Label::new(None);
+        time_label.set_markup(&format!("<span font-family='monospace'>00:00</span>").to_string());
+        container.pack_start(&time_label, false, false, 0);
+
+        let label = Label::new(None);
+        label.set_markup(&format!("<span font-family='monospace'>Flags:</span>").to_string());
         container.pack_start(&label, false, false, 0);
 
         let flags_label = Label::new(None);
-        flags_label.set_markup(&format!("<span font-family='monospace'>0/10</span>").to_string());
+        flags_label.set_markup(&format!("<span font-family='monospace'>0/{mines}</span>", mines = board.borrow().mines_count).to_string());
         container.pack_start(&flags_label, false, false, 0);
 
         let bc = board.clone();
@@ -61,11 +72,12 @@ impl SidePanel {
                     s = seconds
                 )
                 .to_string();
-                label.set_markup(&time_elapsed);
+                time_label.set_markup(&time_elapsed);
 
                 let flags_placed = format!(
-                    "<span font-family='monospace'>{}/10</span>",
-                    b.flags_placed
+                    "<span font-family='monospace'>{flags}/{mines}</span>",
+                    flags = b.flags_placed,
+                    mines = b.mines_count
                 );
                 flags_label.set_markup(&flags_placed.to_string());
                 b.seconds_elapsed += 1;

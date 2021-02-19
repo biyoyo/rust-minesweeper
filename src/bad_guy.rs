@@ -1,4 +1,3 @@
-extern crate gtk;
 use rand::distributions::{Distribution, Uniform};
 
 pub struct BadGuy {
