@@ -5,11 +5,11 @@ pub struct Adjacent {
 }
 
 impl Adjacent {
-    pub fn new(dimension: i8, x: usize, y: usize) -> Adjacent {
+    pub fn new(dimension: usize, x: usize, y: usize) -> Adjacent {
         Adjacent {
             coord: (x as i8, y as i8),
             offset: (-1, -1),
-            dimension,
+            dimension: dimension as i8,
         }
     }
 }

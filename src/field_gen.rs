@@ -4,8 +4,8 @@ pub struct FieldGenerator {
 }
 
 impl FieldGenerator {
-    pub fn new(dimension: i8) -> FieldGenerator {
-        FieldGenerator{counter: 0, dimension: dimension as usize}
+    pub fn new(dimension: usize) -> FieldGenerator {
+        FieldGenerator{counter: 0, dimension}
     }
 }
 
@@ -21,6 +21,6 @@ impl Iterator for FieldGenerator {
         let y = self.counter % self.dimension;
         self.counter += 1;
 
-        Some((x as usize, y as usize))
+        Some((x, y))
     }
 }

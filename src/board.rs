@@ -15,19 +15,19 @@ use crate::pixbufs::Pixbufs;
 
 pub struct Board {
     pub container: Box,
-    pub dimension: i8,
-    pub mines_count: i8,
+    pub dimension: usize,
+    pub mines_count: usize,
     pub fields: Vec<Vec<Field>>,
     pub pixbufs_container: Pixbufs,
     pub game_over: bool,
     pub seconds_elapsed: i32,
-    pub flags_placed: i8,
-    pub click_counter: i32,
+    pub flags_placed: usize,
+    pub click_counter: usize,
     pub bad_guy: BadGuy,
 }
 
 impl Board {
-    pub fn new(dimension: i8, mines_count: i8) -> Rc<RefCell<Board>> {
+    pub fn new(dimension: usize, mines_count: usize) -> Rc<RefCell<Board>> {
         let container = Box::new(Orientation::Vertical, 0);
 
         let board_rc = Rc::new(RefCell::new(Board {
@@ -67,10 +67,15 @@ impl Board {
                         && board.flags_placed <= board.mines_count
                         && !board.fields[x][y].is_clicked
                     {
-                        let flag = board.fields[x][y].is_flagged;
+                        let flagged = board.fields[x][y].is_flagged;
                         //if unflag reduce count
-                        board.flags_placed += -1 * flag as i8 + !flag as i8;
-                        board.fields[x][y].is_flagged = !flag;
+                        if flagged {
+                            board.flags_placed -= 1;
+                        }
+                        else {
+                            board.flags_placed += 1;
+                        }
+                        board.fields[x][y].is_flagged = !flagged;
                         board.change_pixbuf(x, y);
                     }
                     Inhibit(true)
@@ -150,7 +155,7 @@ impl Board {
         while board.click_counter == 0 && board.fields[x][y].value != 0 {
             board.init_fields();
         }
-        if board.click_counter == (board.dimension * board.dimension - board.mines_count).into() {
+        if board.click_counter == (board.dimension * board.dimension - board.mines_count) {
             println!("You won!");
         }
 
