@@ -5,35 +5,41 @@ use rand::distributions::{Distribution, Uniform};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
+use glib::Continue;
 
 use crate::adjacent::Adjacent;
 use crate::field::Field;
 use crate::pixbufs::Pixbufs;
+use crate::bad_guy::BadGuy;
 
 pub struct Board {
     pub container: Box,
     pub dimension: i8,
+    pub mines_count: i8,
     pub fields: Vec<Vec<Field>>,
     pub pixbufs_container: Pixbufs,
     pub game_over: bool,
     pub seconds_elapsed: i32,
     pub flags_placed: i8,
     pub click_counter: i32,
+    bad_guy: BadGuy,
 }
 
 impl Board {
-    pub fn new(dimension: i8) -> Rc<RefCell<Board>> {
+    pub fn new(dimension: i8, mines_count: i8) -> Rc<RefCell<Board>> {
         let container = Box::new(Orientation::Vertical, 0);
 
         let board_rc = Rc::new(RefCell::new(Board {
             container,
             dimension,
+            mines_count,
             fields: Vec::new(),
             pixbufs_container: Pixbufs::new(),
             game_over: false,
             seconds_elapsed: 0,
             flags_placed: 0,
             click_counter: 0,
+            bad_guy: BadGuy::new(dimension),
         }));
 
         let mut board = board_rc.borrow_mut();
@@ -63,6 +69,10 @@ impl Board {
                         board.reveal_all_mines();
                         println!("Issa bomb");
                         return;
+                    }
+
+                    if x == board.bad_guy.position.0 && y == board.bad_guy.position.1 {
+                        board.bad_guy.is_active = true;
                     }
 
                     board.fields[x][y].is_clicked = true;
@@ -127,7 +137,7 @@ impl Board {
                         let mut board = board_clone.borrow_mut();
 
                         if event.get_button() == 3
-                            && board.flags_placed < 10
+                            && board.flags_placed < board.mines_count
                             && !board.fields[x][y].is_clicked
                         {
                             let flag = board.fields[x][y].is_flagged;
@@ -138,8 +148,32 @@ impl Board {
                         }
                         Inhibit(true)
                     });
+                }
             }
-        }
+
+        let board_clone = board_rc.clone();
+
+        glib::timeout_add_seconds_local(1, move || {
+            let mut b = board_clone.borrow_mut();
+            if b.bad_guy.is_active {
+                let (prevx,prevy) = b.bad_guy.position;
+                b.move_bad_guy();
+                let (x,y) = b.bad_guy.position;
+                /*
+                let (x,y) = (prevx, prevy);
+                loop {
+                    b.move_bad_guy();
+                    let (x,y) = b.bad_guy.position;
+                    if b.fields[x][y].value != -1 {
+                        break;
+                    }
+                }
+                */
+                b.change_pixbuf(prevx,prevy);
+                b.change_pixbuf(x,y);
+            }
+            Continue(true)
+        });
 
         board_rc.clone()
     }
@@ -177,7 +211,7 @@ impl Board {
         let mut rng = rand::thread_rng();
         let num = Uniform::from(0..self.dimension);
         let mut mines = 0;
-        while mines != 10 {
+        while mines != self.mines_count {
             let i = num.sample(&mut rng) as usize;
             let j = num.sample(&mut rng) as usize;
             if self.fields[i][j].value != -1 {
@@ -217,6 +251,8 @@ impl Board {
         let field = &self.fields[x][y];
         let pb = if field.value == -1 && (self.game_over || field.is_clicked) && !field.is_flagged {
             self.pixbufs_container.get_bomb()
+        } else if (x, y) == self.bad_guy.position && self.bad_guy.is_active {
+            self.pixbufs_container.get_badguy()
         } else if field.is_clicked {
             self.pixbufs_container.get_numbered(field.value)
         } else if field.is_flagged {
@@ -237,5 +273,20 @@ impl Board {
                 .unwrap()
                 .set_from_pixbuf(pb);
         }
+    }
+
+    pub fn move_bad_guy(&mut self) {
+        let adj = Adjacent::new(self.dimension, self.bad_guy.position.0, self.bad_guy.position.1);
+        let iter: Vec<(usize, usize)> = adj.filter(|(x,y)| !self.fields[*x][*y].is_flagged).collect();
+
+        if iter.is_empty() {
+            return;
+        }
+
+        let mut rng = rand::thread_rng();
+        let num = Uniform::from(0..iter.len());
+        let offset = iter[num.sample(&mut rng)];
+
+        self.bad_guy.position = (offset.0, offset.1);
     }
 }
