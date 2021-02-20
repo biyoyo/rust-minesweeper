@@ -1,7 +1,8 @@
 extern crate gtk;
 use crate::gtk::prelude::Cast;
+use crate::gtk::{Box, Image, Inhibit, Orientation};
+use gtk::{WidgetExt, ToolButtonExt, BoxExt, ImageExt};
 use glib::Continue;
-use gtk::*;
 use rand::distributions::{Distribution, Uniform};
 use std::cell::RefCell;
 use std::collections::VecDeque;
@@ -71,8 +72,7 @@ impl Board {
                         //if unflag reduce count
                         if flagged {
                             board.flags_placed -= 1;
-                        }
-                        else {
+                        } else {
                             board.flags_placed += 1;
                         }
                         board.fields[x][y].is_flagged = !flagged;

@@ -22,11 +22,11 @@ impl SidePanel {
         let label = Label::new(None);
         label.set_markup(&format!("<span font-family='monospace'>New game</span>").to_string());
 
-        let b = Button::new();
-        b.add(&label);
+        let new_game = Button::new();
+        new_game.add(&label);
 
         let bc = board.clone();
-        b.connect_clicked(move |_| {
+        new_game.connect_clicked(move |_| {
             let mut board = bc.borrow_mut();
             board.seconds_elapsed = 0;
             board.flags_placed = 0;
@@ -36,7 +36,7 @@ impl SidePanel {
             board.init_fields();
             println!("bad_guy on: {}", board.bad_guy.is_active);
         });
-        container.pack_start(&b, false, false, 0);
+        container.pack_start(&new_game, false, false, 0);
 
         let label = Label::new(None);
         label.set_markup(&format!("<span font-family='monospace'>Time elapsed:</span>").to_string());

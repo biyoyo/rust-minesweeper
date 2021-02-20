@@ -5,6 +5,7 @@ use gtk::{main_quit, Inhibit};
 use std::cell::RefCell;
 use std::process;
 use std::rc::Rc;
+
 use crate::board::Board;
 
 mod board;
@@ -81,5 +82,6 @@ fn main() {
     }
     let app = App::new();
     app.window.show_all();
+
     gtk::main();
 }
