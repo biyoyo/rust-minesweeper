@@ -34,7 +34,6 @@ impl SidePanel {
             board.click_counter = 0;
             board.bad_guy = BadGuy::new(board.dimension);
             board.init_fields();
-            println!("bad_guy on: {}", board.bad_guy.is_active);
         });
         container.pack_start(&new_game, false, false, 0);
 
